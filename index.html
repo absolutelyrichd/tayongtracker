@@ -11,6 +11,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- Chart.js for Stats -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -111,6 +113,7 @@
                 <nav class="flex -mb-px flex-wrap" aria-label="Tabs">
                     <button id="tabDashboard" class="tab-btn active">Umum</button>
                     <button id="tabInEx" class="tab-btn">Uang Tayong</button>
+                    <button id="tabStats" class="tab-btn">Statistik</button>
                     <button id="tabBackup" class="tab-btn">Manajemen Backup</button>
                 </nav>
             </div>
@@ -187,6 +190,24 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Stats Content -->
+                <div id="statsContent" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h2 class="text-xl font-bold text-center mb-4">Statistik Pengeluaran Umum</h2>
+                            <div class="max-w-md mx-auto">
+                                <canvas id="dashboardChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                             <h2 class="text-xl font-bold text-center mb-4">Statistik Uang Tayong</h2>
+                             <div class="max-w-md mx-auto">
+                                <canvas id="inExChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Backup Management Content -->
                 <div id="backupContent" class="hidden">
@@ -245,6 +266,8 @@
             let unsubscribe = null; // To detach Firestore listener
             let dashboardFilterText = '';
             let inExFilterText = '';
+            let dashboardChartInstance = null;
+            let inExChartInstance = null;
 
             const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
             const formatDate = (dateString) => {
@@ -336,29 +359,38 @@
                 renderTransactions();
                 renderInExSummary();
                 renderInExTransactions();
+                renderAllStats();
             }
 
             // --- TABS ---
             const tabDashboard = document.getElementById('tabDashboard');
             const tabInEx = document.getElementById('tabInEx');
+            const tabStats = document.getElementById('tabStats');
             const tabBackup = document.getElementById('tabBackup');
             const dashboardContent = document.getElementById('dashboardContent');
             const inExContent = document.getElementById('inExContent');
+            const statsContent = document.getElementById('statsContent');
             const backupContent = document.getElementById('backupContent');
             
             function switchTab(activeTab) {
                 const isDashboard = activeTab === 'dashboard';
                 const isInEx = activeTab === 'inEx';
+                const isStats = activeTab === 'stats';
                 const isBackup = activeTab === 'backup';
+
                 tabDashboard.classList.toggle('active', isDashboard);
                 tabInEx.classList.toggle('active', isInEx);
+                tabStats.classList.toggle('active', isStats);
                 tabBackup.classList.toggle('active', isBackup);
+
                 dashboardContent.classList.toggle('hidden', !isDashboard);
                 inExContent.classList.toggle('hidden', !isInEx);
+                statsContent.classList.toggle('hidden', !isStats);
                 backupContent.classList.toggle('hidden', !isBackup);
             }
             tabDashboard.addEventListener('click', () => switchTab('dashboard'));
             tabInEx.addEventListener('click', () => switchTab('inEx'));
+            tabStats.addEventListener('click', () => switchTab('stats'));
             tabBackup.addEventListener('click', () => switchTab('backup'));
 
             // --- GENERIC CONFIRMATION MODAL ---
@@ -583,6 +615,110 @@
             openInExModalBtn.addEventListener('click', openAddInExModal);
             closeInExModalBtn.addEventListener('click', closeInExModal);
             inExModal.addEventListener('click', (e) => { if (e.target === inExModal) closeInExModal(); });
+
+            // --- STATS LOGIC ---
+            const renderDashboardStats = () => {
+                const ctx = document.getElementById('dashboardChart').getContext('2d');
+                const categoryTotals = categories.map(category => {
+                    return {
+                        category: category,
+                        total: transactions
+                            .filter(t => t.category === category)
+                            .reduce((sum, t) => sum + t.amount, 0)
+                    };
+                }).filter(item => item.total > 0); // Hanya tampilkan kategori dengan pengeluaran
+
+                if (dashboardChartInstance) {
+                    dashboardChartInstance.destroy();
+                }
+
+                dashboardChartInstance = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: categoryTotals.map(item => item.category),
+                        datasets: [{
+                            label: 'Pengeluaran per Kategori',
+                            data: categoryTotals.map(item => item.total),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'
+                            ],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += formatCurrency(context.parsed);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            const renderInExStats = () => {
+                const ctx = document.getElementById('inExChart').getContext('2d');
+                const totalIn = inExTransactions.filter(t => t.category === 'IN').reduce((sum, t) => sum + t.amount, 0);
+                const totalEx = inExTransactions.filter(t => t.category === 'EX').reduce((sum, t) => sum + t.amount, 0);
+
+                if (inExChartInstance) {
+                    inExChartInstance.destroy();
+                }
+                
+                inExChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pemasukan (IN)', 'Pengeluaran (EX)'],
+                        datasets: [{
+                            label: 'Pemasukan vs Pengeluaran',
+                            data: [totalIn, totalEx],
+                            backgroundColor: ['rgba(75, 192, 192, 0.8)', 'rgba(255, 99, 132, 0.8)'],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                     options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += formatCurrency(context.parsed);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            const renderAllStats = () => {
+                renderDashboardStats();
+                renderInExStats();
+            };
 
             // --- BACKUP MANAGEMENT LOGIC ---
             const downloadAllBtn = document.getElementById('downloadAllBtn');
