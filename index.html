@@ -193,17 +193,23 @@
 
                 <!-- Stats Content -->
                 <div id="statsContent" class="hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="bg-white p-6 rounded-xl shadow-lg">
-                            <h2 class="text-xl font-bold text-center mb-4">Statistik Pengeluaran Umum</h2>
-                            <div class="max-w-md mx-auto">
+                            <h2 class="text-xl font-bold text-center mb-4">Pengeluaran Umum</h2>
+                            <div class="max-w-xs mx-auto">
                                 <canvas id="dashboardChart"></canvas>
                             </div>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-lg">
-                             <h2 class="text-xl font-bold text-center mb-4">Statistik Uang Tayong</h2>
-                             <div class="max-w-md mx-auto">
+                             <h2 class="text-xl font-bold text-center mb-4">Uang Tayong</h2>
+                             <div class="max-w-xs mx-auto">
                                 <canvas id="inExChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                             <h2 class="text-xl font-bold text-center mb-4">Metode Pembayaran</h2>
+                             <div class="max-w-xs mx-auto">
+                                <canvas id="paymentChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -268,6 +274,7 @@
             let inExFilterText = '';
             let dashboardChartInstance = null;
             let inExChartInstance = null;
+            let paymentChartInstance = null;
 
             const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
             const formatDate = (dateString) => {
@@ -628,7 +635,7 @@
                             .filter(t => t.category === category)
                             .reduce((sum, t) => sum + t.amount, 0)
                     };
-                }).filter(item => item.total > 0); // Hanya tampilkan kategori dengan pengeluaran
+                }).filter(item => item.total > 0);
 
                 if (dashboardChartInstance) {
                     dashboardChartInstance.destroy();
@@ -641,11 +648,7 @@
                         datasets: [{
                             label: 'Pengeluaran per Kategori',
                             data: categoryTotals.map(item => item.total),
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
-                                'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
-                                'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'
-                            ],
+                            backgroundColor: ['rgba(255, 99, 132, 0.8)','rgba(255, 159, 64, 0.8)','rgba(255, 205, 86, 0.8)','rgba(75, 192, 192, 0.8)','rgba(54, 162, 235, 0.8)','rgba(153, 102, 255, 0.8)'],
                             borderColor: '#fff',
                             borderWidth: 2
                         }]
@@ -658,12 +661,8 @@
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        if (context.parsed !== null) {
-                                            label += formatCurrency(context.parsed);
-                                        }
+                                        if (label) label += ': ';
+                                        if (context.parsed !== null) label += formatCurrency(context.parsed);
                                         return label;
                                     }
                                 }
@@ -702,12 +701,56 @@
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        if (context.parsed !== null) {
-                                            label += formatCurrency(context.parsed);
-                                        }
+                                        if (label) label += ': ';
+                                        if (context.parsed !== null) label += formatCurrency(context.parsed);
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            const renderPaymentStats = () => {
+                const ctx = document.getElementById('paymentChart').getContext('2d');
+                const paymentTotals = paymentTypes.map(paymentType => {
+                    return {
+                        payment: paymentType,
+                        total: transactions
+                            .filter(t => t.payment === paymentType)
+                            .reduce((sum, t) => sum + t.amount, 0)
+                    };
+                }).filter(item => item.total > 0);
+
+                if (paymentChartInstance) {
+                    paymentChartInstance.destroy();
+                }
+
+                paymentChartInstance = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: paymentTotals.map(item => item.payment),
+                        datasets: [{
+                            label: 'Penggunaan per Metode Pembayaran',
+                            data: paymentTotals.map(item => item.total),
+                            backgroundColor: [
+                               'rgba(255, 159, 64, 0.8)', 'rgba(54, 162, 235, 0.8)'
+                            ],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed !== null) label += formatCurrency(context.parsed);
                                         return label;
                                     }
                                 }
@@ -720,6 +763,7 @@
             const renderAllStats = () => {
                 renderDashboardStats();
                 renderInExStats();
+                renderPaymentStats();
             };
 
             // --- BACKUP MANAGEMENT LOGIC ---
