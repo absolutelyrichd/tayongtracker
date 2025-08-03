@@ -127,7 +127,7 @@
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <h2 class="text-xl font-bold">Riwayat Pengeluaran Terperinci</h2>
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                                <input type="text" id="dashboardSearch" placeholder="Cari detail atau kategori..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                                <input type="text" id="dashboardSearch" placeholder="Cari detail, kategori, atau pembayaran..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
                                 <button id="openTransactionModalBtn" class="w-full sm:w-auto bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
                                     <i class="fas fa-plus-circle mr-2"></i>Tambah Transaksi
                                 </button>
@@ -169,7 +169,7 @@
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <h2 class="text-xl font-bold">Riwayat</h2>
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                                <input type="text" id="inExSearch" placeholder="Cari berdasarkan detail..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                                <input type="text" id="inExSearch" placeholder="Cari detail atau kategori..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
                                 <button id="openInExModalBtn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
                                     <i class="fas fa-plus-circle mr-2"></i>Tambah Catatan
                                 </button>
@@ -456,7 +456,8 @@
                 const lowercasedFilter = dashboardFilterText.toLowerCase();
                 const filtered = transactions.filter(t =>
                     t.detail.toLowerCase().includes(lowercasedFilter) ||
-                    t.category.toLowerCase().includes(lowercasedFilter)
+                    t.category.toLowerCase().includes(lowercasedFilter) ||
+                    t.payment.toLowerCase().includes(lowercasedFilter)
                 );
 
                 transactionTableBody.innerHTML = '';
@@ -552,7 +553,8 @@
             const renderInExTransactions = () => {
                 const lowercasedFilter = inExFilterText.toLowerCase();
                 const filtered = inExTransactions.filter(t =>
-                    t.detail.toLowerCase().includes(lowercasedFilter)
+                    t.detail.toLowerCase().includes(lowercasedFilter) ||
+                    t.category.toLowerCase().includes(lowercasedFilter)
                 );
 
                 inExTableBody.innerHTML = '';
