@@ -123,9 +123,12 @@
                     <div class="bg-white p-6 rounded-xl shadow-lg">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <h2 class="text-xl font-bold">Riwayat Pengeluaran Terperinci</h2>
-                            <button id="openTransactionModalBtn" class="w-full sm:w-auto bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
-                                <i class="fas fa-plus-circle mr-2"></i>Tambah Transaksi
-                            </button>
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                                <input type="text" id="dashboardSearch" placeholder="Cari detail atau kategori..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                                <button id="openTransactionModalBtn" class="w-full sm:w-auto bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
+                                    <i class="fas fa-plus-circle mr-2"></i>Tambah Transaksi
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left text-slate-500">
@@ -160,11 +163,14 @@
                         </div>
                     </section>
                     <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <h2 class="text-xl font-bold">Riwayat</h2>
-                            <button id="openInExModalBtn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
-                                <i class="fas fa-plus-circle mr-2"></i>Tambah Catatan
-                            </button>
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                                <input type="text" id="inExSearch" placeholder="Cari berdasarkan detail..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                                <button id="openInExModalBtn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
+                                    <i class="fas fa-plus-circle mr-2"></i>Tambah Catatan
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left text-slate-500">
@@ -237,6 +243,8 @@
             let inExTransactions = [];
             let currentUser = null;
             let unsubscribe = null; // To detach Firestore listener
+            let dashboardFilterText = '';
+            let inExFilterText = '';
 
             const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
             const formatDate = (dateString) => {
@@ -254,6 +262,8 @@
             const loginPrompt = document.getElementById('loginPrompt');
             const loginBtn = document.getElementById('loginBtn');
             const mainContent = document.getElementById('mainContent');
+            const dashboardSearch = document.getElementById('dashboardSearch');
+            const inExSearch = document.getElementById('inExSearch');
             
             // --- AUTHENTICATION ---
             loginBtn.addEventListener('click', () => {
@@ -266,7 +276,6 @@
 
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    // User is signed in
                     currentUser = user;
                     loginPrompt.classList.add('hidden');
                     mainContent.classList.remove('hidden');
@@ -283,12 +292,11 @@
                     document.getElementById('logoutBtn').addEventListener('click', logout);
                     listenToData(user.uid);
                 } else {
-                    // User is signed out
                     currentUser = null;
-                    if (unsubscribe) unsubscribe(); // Detach listener
+                    if (unsubscribe) unsubscribe();
                     transactions = [];
                     inExTransactions = [];
-                    renderAll(); // Clear UI
+                    renderAll();
                     loginPrompt.classList.remove('hidden');
                     mainContent.classList.add('hidden');
                     authContainer.innerHTML = '';
@@ -297,8 +305,7 @@
 
             // --- FIRESTORE DATA HANDLING ---
             const listenToData = (uid) => {
-                if (unsubscribe) unsubscribe(); // Detach any existing listener
-
+                if (unsubscribe) unsubscribe();
                 const docRef = db.collection('users').doc(uid);
                 unsubscribe = docRef.onSnapshot(doc => {
                     if (doc.exists) {
@@ -306,14 +313,11 @@
                         transactions = data.transactions || [];
                         inExTransactions = data.inExTransactions || [];
                     } else {
-                        // New user, initialize with empty data
                         transactions = [];
                         inExTransactions = [];
                     }
                     renderAll();
-                }, error => {
-                    console.error("Error listening to data:", error);
-                });
+                }, error => console.error("Error listening to data:", error));
             };
 
             const saveDataToFirestore = async () => {
@@ -417,9 +421,15 @@
                 });
             };
             const renderTransactions = () => {
+                const lowercasedFilter = dashboardFilterText.toLowerCase();
+                const filtered = transactions.filter(t =>
+                    t.detail.toLowerCase().includes(lowercasedFilter) ||
+                    t.category.toLowerCase().includes(lowercasedFilter)
+                );
+
                 transactionTableBody.innerHTML = '';
-                emptyState.classList.toggle('hidden', transactions.length > 0);
-                transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((t, index) => {
+                emptyState.classList.toggle('hidden', filtered.length > 0);
+                filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((t) => {
                     const row = document.createElement('tr');
                     row.className = 'bg-white border-b hover:bg-slate-50';
                     row.innerHTML = `<td class="px-4 py-3 whitespace-nowrap">${formatDate(t.date)}</td><td class="px-4 py-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${categoryColors[t.category] || 'bg-gray-100 text-gray-800'}">${t.category}</span></td><td class="px-4 py-3 font-medium text-slate-900">${t.detail}</td><td class="px-4 py-3 text-right font-medium text-slate-900">${formatCurrency(t.amount)}</td><td class="px-4 py-3">${t.payment}</td><td class="px-4 py-3 text-center"><button data-id="${t.id}" class="edit-btn text-sky-500 hover:text-sky-700 mr-3"><i class="fas fa-edit"></i></button><button data-id="${t.id}" class="delete-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button></td>`;
@@ -435,7 +445,8 @@
                 addTransactionModal.classList.remove('hidden');
             };
             const openEditModal = (id) => {
-                transactionToEditIndex = transactions.findIndex(t => t.id === id);
+                transactionToEditIndex = transactions.findIndex(t => t.id == id);
+                if(transactionToEditIndex === -1) return;
                 const tx = transactions[transactionToEditIndex];
                 dateInput.value = tx.date; categorySelect.value = tx.category; detailInput.value = tx.detail;
                 amountInput.value = tx.amount; paymentSelect.value = tx.payment;
@@ -447,7 +458,7 @@
             transactionForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const transactionData = { date: dateInput.value, category: categorySelect.value, detail: detailInput.value, amount: parseFloat(amountInput.value), payment: paymentSelect.value };
-                if (transactionToEditIndex !== null) {
+                if (transactionToEditIndex !== null && transactionToEditIndex > -1) {
                     transactions[transactionToEditIndex] = { ...transactions[transactionToEditIndex], ...transactionData };
                 } else {
                     transactions.unshift({ ...transactionData, id: Date.now() });
@@ -467,6 +478,10 @@
                         action: () => { transactions = transactions.filter(t => t.id != id); saveDataToFirestore(); }
                     });
                 }
+            });
+            dashboardSearch.addEventListener('input', e => {
+                dashboardFilterText = e.target.value;
+                renderTransactions();
             });
             [categorySelect, paymentSelect].forEach(sel => sel.innerHTML = '');
             categories.forEach(cat => categorySelect.add(new Option(cat, cat)));
@@ -503,9 +518,14 @@
                 finalTotalEl.classList.toggle('text-sky-800', (totalIn - totalEx) >= 0);
             };
             const renderInExTransactions = () => {
+                const lowercasedFilter = inExFilterText.toLowerCase();
+                const filtered = inExTransactions.filter(t =>
+                    t.detail.toLowerCase().includes(lowercasedFilter)
+                );
+
                 inExTableBody.innerHTML = '';
-                inExEmptyState.classList.toggle('hidden', inExTransactions.length > 0);
-                inExTransactions.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((t, index) => {
+                inExEmptyState.classList.toggle('hidden', filtered.length > 0);
+                filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((t) => {
                     const row = document.createElement('tr');
                     row.className = 'bg-white border-b hover:bg-slate-50';
                     const isIncome = t.category === 'IN';
@@ -522,7 +542,8 @@
                 inExModal.classList.remove('hidden');
             };
             const openEditInExModal = (id) => {
-                inExToEditIndex = inExTransactions.findIndex(t => t.id === id);
+                inExToEditIndex = inExTransactions.findIndex(t => t.id == id);
+                if(inExToEditIndex === -1) return;
                 const tx = inExTransactions[inExToEditIndex];
                 inExDate.value = tx.date; inExCategory.value = tx.category;
                 inExDetail.value = tx.detail; inExAmount.value = tx.amount;
@@ -534,7 +555,7 @@
             inExForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const inExData = { date: inExDate.value, category: inExCategory.value, detail: inExDetail.value, amount: parseFloat(inExAmount.value) };
-                if (inExToEditIndex !== null) {
+                if (inExToEditIndex !== null && inExToEditIndex > -1) {
                     inExTransactions[inExToEditIndex] = { ...inExTransactions[inExToEditIndex], ...inExData };
                 } else {
                     inExTransactions.unshift({ ...inExData, id: Date.now() });
@@ -554,6 +575,10 @@
                         action: () => { inExTransactions = inExTransactions.filter(t => t.id != id); saveDataToFirestore(); }
                     });
                 }
+            });
+            inExSearch.addEventListener('input', e => {
+                inExFilterText = e.target.value;
+                renderInExTransactions();
             });
             openInExModalBtn.addEventListener('click', openAddInExModal);
             closeInExModalBtn.addEventListener('click', closeInExModal);
