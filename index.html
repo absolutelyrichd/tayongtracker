@@ -170,15 +170,15 @@
                     <section class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
                         <div class="summary-card bg-teal-50 border-l-4 border-teal-500">
                             <h3 class="font-semibold text-teal-700">PEMASUKAN (IN)</h3>
-                            <p id="inTotal" class="text-2xl font-bold mt-2 text-teal-800">Rp0</p>
+                            <p id="inTotal" class="text-xl font-bold mt-2 text-teal-800">Rp0</p>
                         </div>
                         <div class="summary-card bg-red-50 border-l-4 border-red-500">
                             <h3 class="font-semibold text-red-700">PENGELUARAN (EX)</h3>
-                            <p id="exTotal" class="text-2xl font-bold mt-2 text-red-800">Rp0</p>
+                            <p id="exTotal" class="text-xl font-bold mt-2 text-red-800">Rp0</p>
                         </div>
                         <div class="summary-card bg-sky-50 border-l-4 border-sky-500">
                             <h3 class="font-semibold text-sky-700">TOTAL</h3>
-                            <p id="finalTotal" class="text-2xl font-bold mt-2 text-sky-800">Rp0</p>
+                            <p id="finalTotal" class="text-xl font-bold mt-2 text-sky-800">Rp0</p>
                         </div>
                     </section>
                     <div class="bg-white p-6 rounded-xl shadow-lg">
@@ -186,6 +186,7 @@
                             <h2 class="text-xl font-bold">Riwayat</h2>
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                                 <input type="text" id="inExSearch" placeholder="Cari detail atau kategori..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                                <input type="date" id="inExDateFilter" class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
                                 <button id="openInExModalBtn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
                                     <i class="fas fa-plus-circle mr-2"></i>Tambah Catatan
                                 </button>
@@ -289,6 +290,7 @@
             let dashboardFilterText = '';
             let dashboardFilterDate = ''; // New state for date filter
             let inExFilterText = '';
+            let inExFilterDate = ''; // New state for IN/EX date filter
             let dashboardChartInstance = null;
             let inExChartInstance = null;
 
@@ -318,6 +320,7 @@
             const dashboardSearch = document.getElementById('dashboardSearch');
             const dashboardDateFilter = document.getElementById('dashboardDateFilter'); // New date filter input
             const inExSearch = document.getElementById('inExSearch');
+            const inExDateFilter = document.getElementById('inExDateFilter'); // New IN/EX date filter input
             
             // Pagination elements for Dashboard
             const prevPageBtn = document.getElementById('prevPageBtn');
@@ -383,7 +386,9 @@
                     }
                     // Reset to first page when data changes for both tables
                     currentPage = 1; 
+                    dashboardFilterDate = ''; // Reset dashboard date filter
                     inExCurrentPage = 1;
+                    inExFilterDate = ''; // Reset IN/EX date filter
                     renderAll();
                 }, error => console.error("Error listening to data:", error));
             };
@@ -432,6 +437,17 @@
                 inExContent.classList.toggle('hidden', !isInEx);
                 statsContent.classList.toggle('hidden', !isStats);
                 backupContent.classList.toggle('hidden', !isBackup);
+
+                // Reset filters and pagination when switching tabs
+                if (isDashboard) {
+                    dashboardSearch.value = dashboardFilterText;
+                    dashboardDateFilter.value = dashboardFilterDate;
+                    renderTransactions();
+                } else if (isInEx) {
+                    inExSearch.value = inExFilterText;
+                    inExDateFilter.value = inExFilterDate; // Set IN/EX date filter value
+                    renderInExTransactions();
+                }
             }
             tabDashboard.addEventListener('click', () => switchTab('dashboard'));
             tabInEx.addEventListener('click', () => switchTab('inEx'));
@@ -660,8 +676,9 @@
             const renderInExTransactions = () => {
                 const lowercasedFilter = inExFilterText.toLowerCase();
                 const filteredInExTransactions = inExTransactions.filter(t =>
-                    t.detail.toLowerCase().includes(lowercasedFilter) ||
-                    t.category.toLowerCase().includes(lowercasedFilter)
+                    (t.detail.toLowerCase().includes(lowercasedFilter) ||
+                    t.category.toLowerCase().includes(lowercasedFilter)) &&
+                    (inExFilterDate === '' || t.date === inExFilterDate) // Added date filter for IN/EX
                 );
 
                 // Sort filtered IN/EX transactions by date (newest first)
@@ -701,8 +718,9 @@
             inExNextPageBtn.addEventListener('click', () => {
                 const inExTotalPages = Math.ceil(inExTransactions.filter(t => {
                     const lowercasedFilter = inExFilterText.toLowerCase();
-                    return t.detail.toLowerCase().includes(lowercasedFilter) ||
-                           t.category.toLowerCase().includes(lowercasedFilter);
+                    return (t.detail.toLowerCase().includes(lowercasedFilter) ||
+                           t.category.toLowerCase().includes(lowercasedFilter)) &&
+                           (inExFilterDate === '' || t.date === inExFilterDate);
                 }).length / inExItemsPerPage);
 
                 if (inExCurrentPage < inExTotalPages) {
@@ -757,6 +775,11 @@
             inExSearch.addEventListener('input', e => {
                 inExFilterText = e.target.value;
                 inExCurrentPage = 1; // Reset to first page on new search
+                renderInExTransactions();
+            });
+            inExDateFilter.addEventListener('change', e => { // New event listener for IN/EX date filter
+                inExFilterDate = e.target.value;
+                inExCurrentPage = 1; // Reset to first page on new date filter
                 renderInExTransactions();
             });
             openInExModalBtn.addEventListener('click', openAddInExModal);
