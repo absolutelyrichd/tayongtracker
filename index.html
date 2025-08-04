@@ -32,8 +32,9 @@
         .summary-card h3 {
             font-size: 0.875rem; /* text-sm */
         }
+        /* Adjusted font size for the amount in summary cards */
         .summary-card p {
-            font-size: 1.5rem; /* text-2xl */
+            font-size: 1.25rem; /* text-xl, reduced from text-2xl */
         }
         .modal-backdrop {
             position: fixed;
@@ -203,6 +204,12 @@
                             </table>
                             <p id="inExEmptyState" class="text-center text-slate-500 py-8 hidden">Belum ada catatan IN/EX.</p>
                         </div>
+                        <!-- Pagination Controls for IN/EX -->
+                        <div id="inExPagination" class="flex justify-center items-center gap-2 mt-4">
+                            <button id="inExPrevPageBtn" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">Sebelumnya</button>
+                            <span id="inExPageInfo" class="text-slate-600 text-sm">Halaman 1 dari 1</span>
+                            <button id="inExNextPageBtn" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">Berikutnya</button>
+                        </div>
                     </div>
                 </div>
 
@@ -288,6 +295,9 @@
             // Pagination state for dashboard transactions
             let currentPage = 1;
             const itemsPerPage = 10;
+            // Pagination state for IN/EX transactions
+            let inExCurrentPage = 1;
+            const inExItemsPerPage = 10;
 
             const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
             const formatDate = (dateString) => {
@@ -309,10 +319,16 @@
             const dashboardDateFilter = document.getElementById('dashboardDateFilter'); // New date filter input
             const inExSearch = document.getElementById('inExSearch');
             
-            // Pagination elements
+            // Pagination elements for Dashboard
             const prevPageBtn = document.getElementById('prevPageBtn');
             const nextPageBtn = document.getElementById('nextPageBtn');
             const pageInfo = document.getElementById('pageInfo');
+
+            // Pagination elements for IN/EX
+            const inExPrevPageBtn = document.getElementById('inExPrevPageBtn');
+            const inExNextPageBtn = document.getElementById('inExNextPageBtn');
+            const inExPageInfo = document.getElementById('inExPageInfo');
+
 
             // --- AUTHENTICATION ---
             loginBtn.addEventListener('click', () => {
@@ -365,8 +381,9 @@
                         transactions = [];
                         inExTransactions = [];
                     }
-                    // Reset to first page when data changes
+                    // Reset to first page when data changes for both tables
                     currentPage = 1; 
+                    inExCurrentPage = 1;
                     renderAll();
                 }, error => console.error("Error listening to data:", error));
             };
@@ -477,7 +494,7 @@
                 // Add the Total Pengeluaran card first
                 const totalExpensesCard = document.createElement('div');
                 totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
-                totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-2xl font-bold mt-2 text-red-800">Rp0</p>`;
+                totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">Rp0</p>`; // Adjusted font size here
                 summarySection.appendChild(totalExpensesCard);
 
                 // Calculate and display total expenses
@@ -489,7 +506,7 @@
                     const total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
                     const card = document.createElement('div');
                     card.className = 'summary-card';
-                    card.innerHTML = `<h3 class="font-semibold text-slate-500">${category}</h3><p class="text-2xl font-bold mt-2 text-slate-800">${formatCurrency(total)}</p>`;
+                    card.innerHTML = `<h3 class="font-semibold text-slate-500">${category}</h3><p class="text-xl font-bold mt-2 text-slate-800">${formatCurrency(total)}</p>`; // Adjusted font size here
                     summarySection.appendChild(card);
                 });
             };
@@ -642,21 +659,58 @@
             };
             const renderInExTransactions = () => {
                 const lowercasedFilter = inExFilterText.toLowerCase();
-                const filtered = inExTransactions.filter(t =>
+                const filteredInExTransactions = inExTransactions.filter(t =>
                     t.detail.toLowerCase().includes(lowercasedFilter) ||
                     t.category.toLowerCase().includes(lowercasedFilter)
                 );
 
+                // Sort filtered IN/EX transactions by date (newest first)
+                filteredInExTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                // Pagination logic for IN/EX
+                const inExTotalPages = Math.ceil(filteredInExTransactions.length / inExItemsPerPage);
+                const inExStartIndex = (inExCurrentPage - 1) * inExItemsPerPage;
+                const inExEndIndex = inExStartIndex + inExItemsPerPage;
+                const inExTransactionsToDisplay = filteredInExTransactions.slice(inExStartIndex, inExEndIndex);
+
+
                 inExTableBody.innerHTML = '';
-                inExEmptyState.classList.toggle('hidden', filtered.length > 0);
-                filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((t) => {
+                inExEmptyState.classList.toggle('hidden', inExTransactionsToDisplay.length > 0);
+                inExTransactionsToDisplay.forEach((t) => {
                     const row = document.createElement('tr');
                     row.className = 'bg-white border-b hover:bg-slate-50';
                     const isIncome = t.category === 'IN';
                     row.innerHTML = `<td class="px-4 py-3 whitespace-nowrap">${formatDate(t.date)}</td><td class="px-4 py-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${isIncome ? 'bg-teal-100 text-teal-800' : 'bg-red-100 text-red-800'}">${t.category}</span></td><td class="px-4 py-3 font-medium text-slate-900">${t.detail}</td><td class="px-4 py-3 text-right font-medium ${isIncome ? 'text-teal-600' : 'text-red-600'}">${formatCurrency(t.amount)}</td><td class="px-4 py-3 text-center"><button data-id="${t.id}" class="edit-btn text-sky-500 hover:text-sky-700 mr-3"><i class="fas fa-edit"></i></button><button data-id="${t.id}" class="delete-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button></td>`;
                     inExTableBody.appendChild(row);
                 });
+
+                // Update pagination controls for IN/EX
+                inExPageInfo.textContent = `Halaman ${inExCurrentPage} dari ${inExTotalPages || 1}`;
+                inExPrevPageBtn.disabled = inExCurrentPage === 1;
+                inExNextPageBtn.disabled = inExCurrentPage === inExTotalPages || inExTotalPages === 0;
             };
+
+            // Event listeners for IN/EX pagination buttons
+            inExPrevPageBtn.addEventListener('click', () => {
+                if (inExCurrentPage > 1) {
+                    inExCurrentPage--;
+                    renderInExTransactions();
+                }
+            });
+
+            inExNextPageBtn.addEventListener('click', () => {
+                const inExTotalPages = Math.ceil(inExTransactions.filter(t => {
+                    const lowercasedFilter = inExFilterText.toLowerCase();
+                    return t.detail.toLowerCase().includes(lowercasedFilter) ||
+                           t.category.toLowerCase().includes(lowercasedFilter);
+                }).length / inExItemsPerPage);
+
+                if (inExCurrentPage < inExTotalPages) {
+                    inExCurrentPage++;
+                    renderInExTransactions();
+                }
+            });
+
             const openAddInExModal = () => {
                 inExToEditIndex = null;
                 inExForm.reset();
@@ -702,6 +756,7 @@
             });
             inExSearch.addEventListener('input', e => {
                 inExFilterText = e.target.value;
+                inExCurrentPage = 1; // Reset to first page on new search
                 renderInExTransactions();
             });
             openInExModalBtn.addEventListener('click', openAddInExModal);
