@@ -122,12 +122,19 @@
             <div id="tabContent">
                 <!-- Dashboard Utama Content -->
                 <div id="dashboardContent">
-                    <section id="summarySection" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 mb-8"></section>
+                    <section id="summarySection" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 mb-8">
+                        <!-- Card for Total Pengeluaran -->
+                        <div class="summary-card bg-red-50 border-l-4 border-red-500">
+                            <h3 class="font-semibold text-red-700">Total Pengeluaran</h3>
+                            <p id="totalExpenses" class="text-2xl font-bold mt-2 text-red-800">Rp0</p>
+                        </div>
+                    </section>
                     <div class="bg-white p-6 rounded-xl shadow-lg">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <h2 class="text-xl font-bold">Riwayat Pengeluaran Terperinci</h2>
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                                 <input type="text" id="dashboardSearch" placeholder="Cari detail, kategori, atau pembayaran..." class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
+                                <input type="date" id="dashboardDateFilter" class="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500">
                                 <button id="openTransactionModalBtn" class="w-full sm:w-auto bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
                                     <i class="fas fa-plus-circle mr-2"></i>Tambah Transaksi
                                 </button>
@@ -181,7 +188,7 @@
                                     <tr>
                                         <th scope="col" class="px-4 py-3">Tanggal</th><th scope="col" class="px-4 py-3">Kategori</th>
                                         <th scope="col" class="px-4 py-3">Detail</th><th scope="col" class="px-4 py-3 text-right">Jumlah</th>
-                                        <th scope="col" class="px-4 py-3 text-center">Aksi</th>
+                                        <th scope="col" class="col" class="px-4 py-3 text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="inExTableBody"></tbody>
@@ -193,23 +200,17 @@
 
                 <!-- Stats Content -->
                 <div id="statsContent" class="hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div class="bg-white p-6 rounded-xl shadow-lg">
-                            <h2 class="text-xl font-bold text-center mb-4">Pengeluaran Umum</h2>
-                            <div class="max-w-xs mx-auto">
+                            <h2 class="text-xl font-bold text-center mb-4">Statistik Pengeluaran Umum</h2>
+                            <div class="max-w-md mx-auto">
                                 <canvas id="dashboardChart"></canvas>
                             </div>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-lg">
-                             <h2 class="text-xl font-bold text-center mb-4">Uang Tayong</h2>
-                             <div class="max-w-xs mx-auto">
+                             <h2 class="text-xl font-bold text-center mb-4">Statistik Uang Tayong</h2>
+                             <div class="max-w-md mx-auto">
                                 <canvas id="inExChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-lg">
-                             <h2 class="text-xl font-bold text-center mb-4">Metode Pembayaran</h2>
-                             <div class="max-w-xs mx-auto">
-                                <canvas id="paymentChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -271,10 +272,10 @@
             let currentUser = null;
             let unsubscribe = null; // To detach Firestore listener
             let dashboardFilterText = '';
+            let dashboardFilterDate = ''; // New state for date filter
             let inExFilterText = '';
             let dashboardChartInstance = null;
             let inExChartInstance = null;
-            let paymentChartInstance = null;
 
             const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
             const formatDate = (dateString) => {
@@ -293,6 +294,7 @@
             const loginBtn = document.getElementById('loginBtn');
             const mainContent = document.getElementById('mainContent');
             const dashboardSearch = document.getElementById('dashboardSearch');
+            const dashboardDateFilter = document.getElementById('dashboardDateFilter'); // New date filter input
             const inExSearch = document.getElementById('inExSearch');
             
             // --- AUTHENTICATION ---
@@ -435,6 +437,7 @@
             const categoryColors = { 'Bulanan': 'bg-red-100 text-red-800', 'Mingguan': 'bg-orange-100 text-orange-800', 'Saved': 'bg-gray-100 text-gray-800', 'Tayong': 'bg-green-100 text-green-800', 'Mumih': 'bg-blue-100 text-blue-800', 'Darurat': 'bg-purple-100 text-purple-800' };
             let transactionToEditIndex = null;
             const summarySection = document.getElementById('summarySection');
+            const totalExpensesEl = document.getElementById('totalExpenses'); // New element for total expenses
             const transactionTableBody = document.getElementById('transactionTableBody');
             const emptyState = document.getElementById('emptyState');
             const addTransactionModal = document.getElementById('addTransactionModal');
@@ -450,7 +453,19 @@
             const paymentSelect = document.getElementById('payment');
 
             const renderSummary = () => {
-                summarySection.innerHTML = '';
+                // Render category summaries
+                summarySection.innerHTML = ''; // Clear existing cards
+                // Add the Total Pengeluaran card first
+                const totalExpensesCard = document.createElement('div');
+                totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
+                totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-2xl font-bold mt-2 text-red-800">Rp0</p>`;
+                summarySection.appendChild(totalExpensesCard);
+
+                // Calculate and display total expenses
+                const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
+                document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
+
+                // Add other category cards
                 categories.forEach(category => {
                     const total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
                     const card = document.createElement('div');
@@ -459,13 +474,16 @@
                     summarySection.appendChild(card);
                 });
             };
+
             const renderTransactions = () => {
                 const lowercasedFilter = dashboardFilterText.toLowerCase();
-                const filtered = transactions.filter(t =>
-                    t.detail.toLowerCase().includes(lowercasedFilter) ||
-                    t.category.toLowerCase().includes(lowercasedFilter) ||
-                    t.payment.toLowerCase().includes(lowercasedFilter)
-                );
+                const filtered = transactions.filter(t => {
+                    const matchesText = t.detail.toLowerCase().includes(lowercasedFilter) ||
+                                        t.category.toLowerCase().includes(lowercasedFilter) ||
+                                        t.payment.toLowerCase().includes(lowercasedFilter);
+                    const matchesDate = dashboardFilterDate === '' || t.date === dashboardFilterDate;
+                    return matchesText && matchesDate;
+                });
 
                 transactionTableBody.innerHTML = '';
                 emptyState.classList.toggle('hidden', filtered.length > 0);
@@ -521,6 +539,10 @@
             });
             dashboardSearch.addEventListener('input', e => {
                 dashboardFilterText = e.target.value;
+                renderTransactions();
+            });
+            dashboardDateFilter.addEventListener('change', e => { // Event listener for date filter
+                dashboardFilterDate = e.target.value;
                 renderTransactions();
             });
             [categorySelect, paymentSelect].forEach(sel => sel.innerHTML = '');
@@ -635,7 +657,7 @@
                             .filter(t => t.category === category)
                             .reduce((sum, t) => sum + t.amount, 0)
                     };
-                }).filter(item => item.total > 0);
+                }).filter(item => item.total > 0); // Hanya tampilkan kategori dengan pengeluaran
 
                 if (dashboardChartInstance) {
                     dashboardChartInstance.destroy();
@@ -648,7 +670,11 @@
                         datasets: [{
                             label: 'Pengeluaran per Kategori',
                             data: categoryTotals.map(item => item.total),
-                            backgroundColor: ['rgba(255, 99, 132, 0.8)','rgba(255, 159, 64, 0.8)','rgba(255, 205, 86, 0.8)','rgba(75, 192, 192, 0.8)','rgba(54, 162, 235, 0.8)','rgba(153, 102, 255, 0.8)'],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'
+                            ],
                             borderColor: '#fff',
                             borderWidth: 2
                         }]
@@ -661,8 +687,12 @@
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.label || '';
-                                        if (label) label += ': ';
-                                        if (context.parsed !== null) label += formatCurrency(context.parsed);
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += formatCurrency(context.parsed);
+                                        }
                                         return label;
                                     }
                                 }
@@ -701,56 +731,12 @@
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.label || '';
-                                        if (label) label += ': ';
-                                        if (context.parsed !== null) label += formatCurrency(context.parsed);
-                                        return label;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            };
-
-            const renderPaymentStats = () => {
-                const ctx = document.getElementById('paymentChart').getContext('2d');
-                const paymentTotals = paymentTypes.map(paymentType => {
-                    return {
-                        payment: paymentType,
-                        total: transactions
-                            .filter(t => t.payment === paymentType)
-                            .reduce((sum, t) => sum + t.amount, 0)
-                    };
-                }).filter(item => item.total > 0);
-
-                if (paymentChartInstance) {
-                    paymentChartInstance.destroy();
-                }
-
-                paymentChartInstance = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: paymentTotals.map(item => item.payment),
-                        datasets: [{
-                            label: 'Penggunaan per Metode Pembayaran',
-                            data: paymentTotals.map(item => item.total),
-                            backgroundColor: [
-                               'rgba(255, 159, 64, 0.8)', 'rgba(54, 162, 235, 0.8)'
-                            ],
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'top' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.label || '';
-                                        if (label) label += ': ';
-                                        if (context.parsed !== null) label += formatCurrency(context.parsed);
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += formatCurrency(context.parsed);
+                                        }
                                         return label;
                                     }
                                 }
@@ -763,7 +749,6 @@
             const renderAllStats = () => {
                 renderDashboardStats();
                 renderInExStats();
-                renderPaymentStats();
             };
 
             // --- BACKUP MANAGEMENT LOGIC ---
