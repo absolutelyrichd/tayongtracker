@@ -221,11 +221,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DASHBOARD (DETAILED) LOGIC ---
     const categories = ['Bulanan', 'Mingguan', 'Saved', 'Tayong', 'Mumih', 'Darurat'];
     const paymentTypes = ['Cash', 'Gopay'];
-    const categoryColors = { 'Bulanan': 'bg-red-100 text-red-800', 'Mingguan': 'bg-orange-100 text-orange-800', 'Saved': 'bg-gray-100 text-gray-800', 'Tayong': 'bg-green-100 text-green-800', 'Mumih': 'bg-blue-100 text-blue-800', 'Darurat': 'bg-purple-100 text-purple-800' };
+    const categoryColors = { 'Bulanan': 'bg-red-100 text-red-800', 'Mingguan': 'bg-orange-100 text-orange-800', 'Saved': 'bg-gray-100 text-gray-800', 'Mumih': 'bg-blue-100 text-blue-800', 'Darurat': 'bg-purple-100 text-purple-800', 'Tayong': 'bg-green-100 text-green-800' };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
-    const totalExpensesEl = document.getElementById('totalExpenses'); // Element for total expenses
-    const transactionTableBody = document.getElementById('transactionTableBody');
+    const totalExpensesEl = document.getElementById('totalExpenses');
+    const dashboardTransactionContainer = document.getElementById('dashboardTransactionContainer');
     const emptyState = document.getElementById('emptyState');
     const addTransactionModal = document.getElementById('addTransactionModal');
     const openTransactionModalBtn = document.getElementById('openTransactionModalBtn');
@@ -275,20 +275,65 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sort filtered transactions by date (newest first)
         filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // Pagination logic
-        const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+        const groupedByDate = filteredTransactions.reduce((acc, t) => {
+            (acc[t.date] = acc[t.date] || []).push(t);
+            return acc;
+        }, {});
+        
+        const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+        
+        // Pagination logic based on dates
+        const totalPages = Math.ceil(sortedDates.length / itemsPerPage);
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
-        const transactionsToDisplay = filteredTransactions.slice(startIndex, endIndex);
+        const datesToDisplay = sortedDates.slice(startIndex, endIndex);
 
-        transactionTableBody.innerHTML = '';
-        emptyState.classList.toggle('hidden', transactionsToDisplay.length > 0);
+        dashboardTransactionContainer.innerHTML = '';
+        emptyState.classList.toggle('hidden', datesToDisplay.length > 0);
 
-        transactionsToDisplay.forEach((t) => {
-            const row = document.createElement('tr');
-            row.className = 'bg-white border-b hover:bg-slate-50';
-            row.innerHTML = `<td class="px-4 py-3 whitespace-nowrap">${formatDate(t.date)}</td><td class="px-4 py-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${categoryColors[t.category] || 'bg-gray-100 text-gray-800'}">${t.category}</span></td><td class="px-4 py-3 font-medium text-slate-900">${t.detail}</td><td class="px-4 py-3 text-right font-medium text-slate-900">${formatCurrency(t.amount)}</td><td class="px-4 py-3">${t.payment}</td><td class="px-4 py-3 text-center"><button data-id="${t.id}" class="edit-btn text-sky-500 hover:text-sky-700 mr-3"><i class="fas fa-edit"></i></button><button data-id="${t.id}" class="delete-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button></td>`;
-            transactionTableBody.appendChild(row);
+        datesToDisplay.forEach(date => {
+            const dailyTransactions = groupedByDate[date];
+            const dailyTotal = dailyTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+            // Create the card for the day
+            const dailyCard = document.createElement('div');
+            dailyCard.className = 'bg-white p-4 rounded-xl shadow-lg border-2 border-slate-200 mb-4';
+
+            // Create the header with date and daily total
+            const header = document.createElement('div');
+            header.className = 'flex justify-between items-center mb-2 pb-2 border-b border-slate-200';
+            header.innerHTML = `
+                <div>
+                    <h3 class="text-md font-bold text-slate-800">${formatDate(date)}</h3>
+                </div>
+                <div>
+                    <span class="text-sm text-slate-500">Pengeluaran: </span>
+                    <span class="font-bold text-red-600">${formatCurrency(dailyTotal)}</span>
+                </div>
+            `;
+            dailyCard.appendChild(header);
+
+            // Create the list of transactions for that day
+            dailyTransactions.forEach(t => {
+                const transactionItem = document.createElement('div');
+                transactionItem.className = 'flex justify-between items-center py-2 border-b border-slate-100 last:border-b-0';
+                transactionItem.innerHTML = `
+                    <div class="flex items-center gap-3 flex-grow">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${categoryColors[t.category] || 'bg-gray-100 text-gray-800'}">${t.category}</span>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-slate-800">${t.detail}</p>
+                            <p class="text-xs text-slate-500">${t.payment}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-red-600 text-sm">${formatCurrency(t.amount)}</span>
+                        <button data-id="${t.id}" class="edit-btn text-sky-500 hover:text-sky-700 mr-2"><i class="fas fa-edit"></i></button>
+                        <button data-id="${t.id}" class="delete-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `;
+                dailyCard.appendChild(transactionItem);
+            });
+            dashboardTransactionContainer.appendChild(dailyCard);
         });
 
         // Update pagination controls
@@ -296,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
         prevPageBtn.disabled = currentPage === 1;
         nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
     };
-
+    
     // Event listeners for pagination buttons
     prevPageBtn.addEventListener('click', () => {
         if (currentPage > 1) {
@@ -306,14 +351,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     nextPageBtn.addEventListener('click', () => {
-        const totalPages = Math.ceil(transactions.filter(t => {
-            const lowercasedFilter = dashboardFilterText.toLowerCase();
+        const lowercasedFilter = dashboardFilterText.toLowerCase();
+        const filteredTransactions = transactions.filter(t => {
             const matchesText = t.detail.toLowerCase().includes(lowercasedFilter) ||
                                 t.category.toLowerCase().includes(lowercasedFilter) ||
                                 t.payment.toLowerCase().includes(lowercasedFilter);
-            const matchesDate = dashboardFilterDate === '' || t.date === dashboardFilterDate;
+            const matchesDate = dashboardFilterDate === '' || t.date === dashboardDateFilter.value;
             return matchesText && matchesDate;
-        }).length / itemsPerPage);
+        });
+        
+        const groupedByDate = filteredTransactions.reduce((acc, t) => {
+            (acc[t.date] = acc[t.date] || []).push(t);
+            return acc;
+        }, {});
+        const totalPages = Math.ceil(Object.keys(groupedByDate).length / itemsPerPage);
 
         if (currentPage < totalPages) {
             currentPage++;
@@ -351,7 +402,8 @@ document.addEventListener('DOMContentLoaded', () => {
         saveDataToFirestore();
         closeTransactionModal();
     });
-    transactionTableBody.addEventListener('click', (e) => {
+    // Event listener for edit/delete buttons on the new card view
+    dashboardTransactionContainer.addEventListener('click', (e) => {
         const editButton = e.target.closest('.edit-btn');
         if (editButton) return openEditModal(editButton.dataset.id);
         const deleteButton = e.target.closest('.delete-btn');
