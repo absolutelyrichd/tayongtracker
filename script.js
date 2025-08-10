@@ -447,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Create the card for the day
             const dailyCard = document.createElement('div');
-            dailyCard.className = 'bg-white p-4 rounded-xl shadow-lg mb-4';
+            dailyCard.className = 'bg-white p-4 rounded-xl shadow-lg border-2 border-slate-200 mb-4';
 
             // Create the header with date and daily total
             const header = document.createElement('div');
