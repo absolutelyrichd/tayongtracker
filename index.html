@@ -13,7 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <!-- Chart.js for Stats -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -193,19 +193,11 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="overflow-x-auto"> <!-- This div enables horizontal scrolling -->
-                            <table class="w-full text-sm text-left text-slate-500 min-w-[600px]"> <!-- Added min-w-[600px] -->
-                                <thead class="text-xs text-slate-700 uppercase bg-slate-100">
-                                    <tr>
-                                        <th scope="col" class="px-4 py-3">Tanggal</th><th scope="col" class="px-4 py-3">Kategori</th>
-                                        <th scope="col" class="px-4 py-3">Detail</th><th scope="col" class="px-4 py-3 text-right">Jumlah</th>
-                                        <th scope="col" class="col" class="px-4 py-3 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="inExTableBody"></tbody>
-                            </table>
-                            <p id="inExEmptyState" class="text-center text-slate-500 py-8 hidden">Belum ada catatan IN/EX.</p>
+                        <!-- New container for the card view -->
+                        <div id="inExContainer" class="space-y-4">
+                            <!-- Cards will be dynamically added here -->
                         </div>
+                        <p id="inExEmptyState" class="text-center text-slate-500 py-8 hidden">Belum ada catatan IN/EX.</p>
                         <!-- Pagination Controls for IN/EX -->
                         <div id="inExPagination" class="flex justify-center items-center gap-2 mt-4">
                             <button id="inExPrevPageBtn" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">Sebelumnya</button>
