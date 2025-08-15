@@ -101,6 +101,21 @@
         #mainContent.hidden {
             display: none;
         }
+
+        /* CSS untuk tombol back-to-top */
+        #backToTopBtn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 99;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        #backToTopBtn.show {
+            opacity: 1;
+            visibility: visible;
+        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -260,7 +275,12 @@
     <div id="confirmationModal" class="modal-backdrop hidden">
         <div class="modal-content text-center"><h3 id="confirmTitle" class="text-lg font-bold mb-2">Konfirmasi</h3><p id="confirmMessage" class="text-slate-600 mb-6">Apakah Anda yakin?</p><div class="flex justify-center gap-4"><button id="cancelConfirm" class="px-6 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors">Batal</button><button id="confirmAction" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Konfirmasi</button></div></div>
     </div>
-<script type="module" src="/script.js"></script>
+
+    <!-- Tombol Back to Top -->
+    <button id="backToTopBtn" title="Kembali ke Atas" class="p-3 bg-sky-600 text-white rounded-full shadow-lg hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+        <i class="fas fa-arrow-up"></i>
+    </button>
     
+<script type="module" src="/script.js"></script>
 </body>
 </html>

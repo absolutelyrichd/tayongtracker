@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const inExNextPageBtn = document.getElementById('inExNextPageBtn');
     const inExPageInfo = document.getElementById('inExPageInfo');
 
+    // Tambahkan elemen tombol back-to-top
+    const backToTopBtn = document.getElementById('backToTopBtn');
 
     // --- AUTHENTICATION ---
     loginBtn.addEventListener('click', () => {
@@ -789,5 +791,23 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally { e.target.value = ''; }
         };
         reader.readAsText(file);
+    });
+
+    // --- FITUR BACK-TO-TOP ---
+    // Logika untuk menampilkan/menyembunyikan tombol
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 200) {
+            backToTopBtn.classList.add('show');
+        } else {
+            backToTopBtn.classList.remove('show');
+        }
+    });
+
+    // Logika untuk menggulir ke atas saat tombol diklik
+    backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     });
 });
