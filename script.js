@@ -83,14 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = user;
             loginPrompt.classList.add('hidden');
             mainContent.classList.remove('hidden');
-            // Injected content for authContainer, adjusted for mobile responsiveness
+            // Konten yang disuntikkan untuk authContainer, disesuaikan agar responsif
             authContainer.innerHTML = `
                 <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
                     <img src="${user.photoURL}" alt="User Photo" class="w-10 h-10 rounded-full">
-                    <div class="text-center sm:text-left">
-                        <p class="font-semibold text-sm">${user.displayName}</p>
-                        <p class="text-xs text-slate-500">${user.email}</p>
-                    </div>
                     <button id="logoutBtn" class="mt-2 sm:mt-0 sm:ml-4 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm">Logout</button>
                 </div>
             `;
