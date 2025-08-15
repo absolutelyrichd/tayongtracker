@@ -219,9 +219,19 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmationModal.addEventListener('click', (e) => { if (e.target === confirmationModal) closeConfirmationModal(); });
     
     // --- DASHBOARD (DETAILED) LOGIC ---
-    const categories = ['Bulanan', 'Mingguan', 'Saved', 'Tayong', 'Mumih', 'Darurat'];
+    // Update: Tambahkan kategori "Jajan di luar"
+    const categories = ['Bulanan', 'Mingguan', 'Saved', 'Tayong', 'Mumih', 'Darurat', 'Jajan di luar'];
     const paymentTypes = ['Cash', 'Gopay'];
-    const categoryColors = { 'Bulanan': 'bg-red-100 text-red-800', 'Mingguan': 'bg-orange-100 text-orange-800', 'Saved': 'bg-gray-100 text-gray-800', 'Mumih': 'bg-blue-100 text-blue-800', 'Darurat': 'bg-purple-100 text-purple-800', 'Tayong': 'bg-green-100 text-green-800' };
+    // Update: Tambahkan warna untuk kategori "Jajan di luar"
+    const categoryColors = { 
+        'Bulanan': 'bg-red-100 text-red-800',
+        'Mingguan': 'bg-orange-100 text-orange-800',
+        'Saved': 'bg-gray-100 text-gray-800',
+        'Mumih': 'bg-blue-100 text-blue-800',
+        'Darurat': 'bg-purple-100 text-purple-800',
+        'Tayong': 'bg-green-100 text-green-800',
+        'Jajan di luar': 'bg-yellow-100 text-yellow-800' // Warna baru untuk kategori baru
+    };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
     const totalExpensesEl = document.getElementById('totalExpenses');
@@ -657,7 +667,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
                         'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
-                        'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'
+                        'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)',
+                        'rgba(255, 235, 59, 0.8)' // Warna baru untuk "Jajan di luar"
                     ],
                     borderColor: '#fff',
                     borderWidth: 2
