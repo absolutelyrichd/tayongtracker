@@ -116,6 +116,58 @@
             opacity: 1;
             visibility: visible;
         }
+
+        /* Tambahkan CSS baru untuk tab yang sticky dan bergaya card */
+        #sticky-tabs {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            padding: 0.5rem 0; /* Tambahkan sedikit padding */
+            margin: 0;
+            border: none; /* Hilangkan border asli */
+            backdrop-filter: blur(10px);
+            background-color: rgba(255, 255, 255, 0.7); /* Latar belakang semi-transparan */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            max-width: 90%; /* Sesuaikan agar seperti card */
+            margin-left: auto;
+            margin-right: auto;
+            transform: translateY(-1rem);
+            /* Pastikan kontainer flex di dalam memiliki lebar penuh */
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Modifikasi .tab-btn di dalam #sticky-tabs */
+        #sticky-tabs .tab-btn {
+            border-bottom: none; /* Hapus border bawah */
+            border-radius: 0.5rem; /* Tambahkan border-radius */
+            padding: 0.75rem 1rem;
+            margin: 0 0.25rem;
+            transition: background-color 0.2s;
+        }
+        
+        #sticky-tabs .tab-btn:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+            color: #0f172a;
+        }
+        
+        #sticky-tabs .tab-btn.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+            border-bottom: none; /* Hapus border bawah */
+            border-radius: 0.5rem;
+        }
+        #sticky-tabs .tab-btn.active:hover {
+            background-color: #0c88b8; /* sky-600 */
+            color: white;
+        }
+        
+        /* Tambahkan padding di bagian atas mainContent untuk menghindari konten tertutup */
+        #mainContent {
+            padding-top: 2rem;
+        }
+        
     </style>
 </head>
 <body class="text-slate-800">
@@ -144,9 +196,9 @@
 
         <!-- Main App Content -->
         <div id="mainContent" class="hidden">
-            <!-- Tab Navigation -->
-            <div class="mb-6 border-b border-gray-200">
-                <nav class="flex -mb-px flex-wrap" aria-label="Tabs">
+            <!-- Tab Navigation (Diperbarui) -->
+            <div id="sticky-tabs" class="mb-6">
+                <nav class="flex flex-wrap justify-center sm:justify-start" aria-label="Tabs">
                     <button id="tabDashboard" class="tab-btn active">Umum</button>
                     <button id="tabInEx" class="tab-btn">Uang Tayong</button>
                     <button id="tabStats" class="tab-btn">Statistik</button>
