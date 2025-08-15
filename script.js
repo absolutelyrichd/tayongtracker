@@ -810,4 +810,17 @@ document.addEventListener('DOMContentLoaded', () => {
             behavior: 'smooth'
         });
     });
+
+    // --- KODE BARU UNTUK TAB STICKY ---
+    const stickyTabs = document.getElementById('sticky-tabs');
+    const headerElement = document.querySelector('header');
+    
+    // Perbarui: Gunakan Intersection Observer API untuk deteksi sticky yang lebih efisien
+    const observer = new IntersectionObserver( 
+        ([e]) => e.target.classList.toggle('scrolled', e.intersectionRatio < 1), 
+        { threshold: [1] }
+    );
+    
+    // Mulai amati elemen header, saat header tidak lagi terlihat, tab akan menjadi sticky
+    observer.observe(headerElement);
 });

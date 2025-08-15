@@ -117,24 +117,24 @@
             visibility: visible;
         }
 
-        /* Tambahkan CSS baru untuk tab yang sticky dan bergaya card */
+        /* CSS default untuk tab */
         #sticky-tabs {
-            position: sticky;
-            top: 1rem; /* Ubah jarak dari atas menjadi 1rem */
-            z-index: 20;
-            padding: 0.5rem 0;
-            margin: 0;
-            border: none;
-            backdrop-filter: blur(10px);
-            background-color: rgba(255, 255, 255, 0.7);
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             max-width: 90%;
             margin-left: auto;
             margin-right: auto;
-            transform: translateY(0); /* Hapus transform untuk menyesuaikan posisi baru */
-            display: flex;
-            justify-content: center;
+            padding: 0.5rem 0;
+            border-radius: 0.75rem;
+            z-index: 20;
+            transition: all 0.3s ease-in-out; /* Tambahkan transisi untuk efek yang lebih halus */
+        }
+
+        /* Kelas baru yang akan ditambahkan oleh JS saat digulir */
+        #sticky-tabs.scrolled {
+            position: sticky;
+            top: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            backdrop-filter: blur(10px);
+            background-color: rgba(255, 255, 255, 0.7);
         }
 
         /* Modifikasi .tab-btn di dalam #sticky-tabs */
@@ -164,7 +164,7 @@
         
         /* Sesuaikan padding di bagian atas mainContent untuk memperhitungkan jarak baru */
         #mainContent {
-            padding-top: 3rem; /* Ubah padding agar konten tidak tertutup */
+            padding-top: 3rem;
         }
         
     </style>
