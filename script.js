@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Perbarui: Gunakan Intersection Observer API untuk deteksi sticky yang lebih efisien
     const observer = new IntersectionObserver( 
-        ([e]) => e.target.classList.toggle('scrolled', e.intersectionRatio < 1), 
+        ([e]) => stickyTabs.classList.toggle('scrolled', e.intersectionRatio < 1), 
         { threshold: [1] }
     );
     
