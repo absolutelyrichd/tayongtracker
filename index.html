@@ -126,6 +126,8 @@
             border-radius: 0.75rem;
             z-index: 20;
             transition: all 0.3s ease-in-out; /* Tambahkan transisi untuk efek yang lebih halus */
+            display: flex; /* Aktifkan flexbox */
+            justify-content: center; /* Posisikan konten di tengah secara horizontal */
         }
 
         /* Kelas baru yang akan ditambahkan oleh JS saat digulir */
@@ -197,7 +199,7 @@
         <div id="mainContent" class="hidden">
             <!-- Tab Navigation (Diperbarui) -->
             <div id="sticky-tabs" class="mb-6">
-                <nav class="flex flex-wrap justify-center sm:justify-start" aria-label="Tabs">
+                <nav class="flex flex-wrap justify-center" aria-label="Tabs">
                     <button id="tabDashboard" class="tab-btn active">Umum</button>
                     <button id="tabInEx" class="tab-btn">Uang Tayong</button>
                     <button id="tabStats" class="tab-btn">Statistik</button>
