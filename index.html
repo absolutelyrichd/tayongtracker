@@ -120,28 +120,27 @@
         /* Tambahkan CSS baru untuk tab yang sticky dan bergaya card */
         #sticky-tabs {
             position: sticky;
-            top: 0;
+            top: 1rem; /* Ubah jarak dari atas menjadi 1rem */
             z-index: 20;
-            padding: 0.5rem 0; /* Tambahkan sedikit padding */
+            padding: 0.5rem 0;
             margin: 0;
-            border: none; /* Hilangkan border asli */
+            border: none;
             backdrop-filter: blur(10px);
-            background-color: rgba(255, 255, 255, 0.7); /* Latar belakang semi-transparan */
-            border-radius: 0.75rem; /* rounded-xl */
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 0.75rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            max-width: 90%; /* Sesuaikan agar seperti card */
+            max-width: 90%;
             margin-left: auto;
             margin-right: auto;
-            transform: translateY(-1rem);
-            /* Pastikan kontainer flex di dalam memiliki lebar penuh */
+            transform: translateY(0); /* Hapus transform untuk menyesuaikan posisi baru */
             display: flex;
             justify-content: center;
         }
 
         /* Modifikasi .tab-btn di dalam #sticky-tabs */
         #sticky-tabs .tab-btn {
-            border-bottom: none; /* Hapus border bawah */
-            border-radius: 0.5rem; /* Tambahkan border-radius */
+            border-bottom: none;
+            border-radius: 0.5rem;
             padding: 0.75rem 1rem;
             margin: 0 0.25rem;
             transition: background-color 0.2s;
@@ -153,19 +152,19 @@
         }
         
         #sticky-tabs .tab-btn.active {
-            background-color: #0ea5e9; /* sky-500 */
+            background-color: #0ea5e9;
             color: white;
-            border-bottom: none; /* Hapus border bawah */
+            border-bottom: none;
             border-radius: 0.5rem;
         }
         #sticky-tabs .tab-btn.active:hover {
-            background-color: #0c88b8; /* sky-600 */
+            background-color: #0c88b8;
             color: white;
         }
         
-        /* Tambahkan padding di bagian atas mainContent untuk menghindari konten tertutup */
+        /* Sesuaikan padding di bagian atas mainContent untuk memperhitungkan jarak baru */
         #mainContent {
-            padding-top: 2rem;
+            padding-top: 3rem; /* Ubah padding agar konten tidak tertutup */
         }
         
     </style>
