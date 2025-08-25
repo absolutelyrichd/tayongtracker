@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GLOBAL STATE & UTILITIES ---
     let transactions = [];
     let inExTransactions = [];
-    let budget = 0; // State untuk menyimpan budget bulanan
+    let budgets = {}; // State untuk menyimpan budget per kategori
     let currentUser = null;
     let unsubscribe = null; // Untuk melepaskan listener Firestore
     let dashboardFilterText = '';
@@ -71,12 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToTopBtn = document.getElementById('backToTopBtn');
 
     // Elemen Budget
-    const initialBudgetDisplay = document.getElementById('initialBudgetDisplay');
-    const monthlyExpensesDisplay = document.getElementById('monthlyExpensesDisplay');
-    const remainingBudgetDisplay = document.getElementById('remainingBudgetDisplay');
-    const remainingBudgetCard = document.getElementById('remainingBudgetCard');
-    const initialBudgetInput = document.getElementById('initialBudgetInput');
-    const saveBudgetBtn = document.getElementById('saveBudgetBtn');
+    const budgetCategorySelect = document.getElementById('budgetCategorySelect');
+    const budgetAmountInput = document.getElementById('budgetAmountInput');
+    const budgetForm = document.getElementById('budgetForm');
+    const currentBudgetsContainer = document.getElementById('currentBudgets');
 
     // --- AUTENTIKASI ---
     loginBtn.addEventListener('click', () => {
@@ -106,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (unsubscribe) unsubscribe();
             transactions = [];
             inExTransactions = [];
-            budget = 0; // Reset budget
+            budgets = {}; // Reset budgets
             renderAll();
             loginPrompt.classList.remove('hidden');
             mainContent.classList.add('hidden');
@@ -123,11 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = doc.data();
                 transactions = data.transactions || [];
                 inExTransactions = data.inExTransactions || [];
-                budget = data.budget || 0; // Muat budget dari Firestore
+                budgets = data.budgets || {}; // Muat budgets dari Firestore
             } else {
                 transactions = [];
                 inExTransactions = [];
-                budget = 0;
+                budgets = {};
             }
             // Reset ke halaman pertama saat data berubah untuk kedua tabel
             currentPage = 1; 
@@ -142,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return;
         try {
             const docRef = db.collection('users').doc(currentUser.uid);
-            await docRef.set({ transactions, inExTransactions, budget });
+            await docRef.set({ transactions, inExTransactions, budgets });
         } catch (error) {
             console.error("Error saving data:", error);
         }
@@ -151,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- RENDER SEMUA ---
     const renderAll = () => {
         renderSummary();
-        renderBudgetSummary();
+        renderBudgetForm();
         renderTransactions();
         renderInExSummary();
         renderInExTransactions();
@@ -194,12 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
             dashboardSearch.value = dashboardFilterText;
             dashboardDateFilter.value = dashboardFilterDate;
             renderTransactions();
+            renderSummary();
         } else if (isInEx) {
             inExSearch.value = inExFilterText;
             inExDateFilter.value = inExFilterDate; // Set nilai filter tanggal IN/EX
             renderInExTransactions();
         } else if (isBudget) {
-            renderBudgetSummary();
+            renderBudgetForm();
         }
     }
     tabDashboard.addEventListener('click', () => switchTab('dashboard'));
@@ -271,23 +270,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderSummary = () => {
         summarySection.innerHTML = ''; // Hapus kartu yang sudah ada
         
-        // Tambahkan kartu Total Pengeluaran terlebih dahulu
-        const totalExpensesCard = document.createElement('div');
-        totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
-        totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">Rp0</p>`; // Menyesuaikan ukuran font di sini
-        summarySection.appendChild(totalExpensesCard);
-
         // Hitung dan tampilkan total pengeluaran
         const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
-        document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
 
-        // Tambahkan kartu kategori lainnya
+        // Buat kartu Total Pengeluaran
+        const totalExpensesCard = document.createElement('div');
+        totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
+        totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p class="text-xl font-bold mt-2 text-red-800">${formatCurrency(totalExpenses)}</p>`;
+        summarySection.appendChild(totalExpensesCard);
+
+        // Tambahkan kartu untuk setiap kategori
         categories.forEach(category => {
             const total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
-            const card = document.createElement('div');
-            card.className = 'summary-card';
-            card.innerHTML = `<h3 class="font-semibold text-slate-500">${category}</h3><p class="text-xl font-bold mt-2 text-slate-800">${formatCurrency(total)}</p>`; // Menyesuaikan ukuran font di sini
-            summarySection.appendChild(card);
+            
+            const categoryCard = document.createElement('div');
+            categoryCard.className = 'summary-card';
+            categoryCard.innerHTML = `
+                <h3 class="font-semibold text-slate-500">${category}</h3>
+                <p class="text-xl font-bold mt-2 text-slate-800">${formatCurrency(total)}</p>
+            `;
+            summarySection.appendChild(categoryCard);
+
+            // Jika ada budget untuk kategori ini, buat kartu budget
+            if (budgets[category] !== undefined && budgets[category] !== null) {
+                const initialBudget = budgets[category];
+                const remainingBudget = initialBudget - total;
+                const remainingCard = document.createElement('div');
+                
+                let cardClass = 'summary-card';
+                let cardColor = '';
+                if (remainingBudget < 0) {
+                    cardClass += ' bg-red-50 border-l-4 border-red-500';
+                    cardColor = 'text-red-800';
+                } else {
+                    cardClass += ' bg-sky-50 border-l-4 border-sky-500';
+                    cardColor = 'text-sky-800';
+                }
+
+                remainingCard.className = cardClass;
+                remainingCard.innerHTML = `
+                    <h3 class="font-semibold text-slate-700">Sisa Budget ${category}</h3>
+                    <p class="text-xl font-bold mt-2 ${cardColor}">${formatCurrency(remainingBudget)}</p>
+                `;
+                summarySection.appendChild(remainingCard);
+            }
         });
     };
 
@@ -464,42 +490,41 @@ document.addEventListener('DOMContentLoaded', () => {
     closeTransactionModalBtn.addEventListener('click', closeTransactionModal);
     addTransactionModal.addEventListener('click', (e) => { if (e.target === addTransactionModal) closeTransactionModal(); });
 
-    // --- LOGIKA BUDGET BULANAN BARU ---
-    const renderBudgetSummary = () => {
-        const totalMonthlyExpenses = transactions
-            .filter(t => t.category === 'Bulanan')
-            .reduce((sum, t) => sum + t.amount, 0);
-            
-        const remainingBudget = budget - totalMonthlyExpenses;
+    // --- LOGIKA BUDGET BARU ---
+    const renderBudgetForm = () => {
+        budgetCategorySelect.innerHTML = '';
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            budgetCategorySelect.appendChild(option);
+        });
 
-        initialBudgetDisplay.textContent = formatCurrency(budget);
-        monthlyExpensesDisplay.textContent = formatCurrency(totalMonthlyExpenses);
-        remainingBudgetDisplay.textContent = formatCurrency(remainingBudget);
-
-        // Perbarui warna kartu sisa budget
-        if (remainingBudget < 0) {
-            remainingBudgetCard.classList.remove('bg-sky-50', 'border-sky-500');
-            remainingBudgetCard.classList.add('bg-red-50', 'border-red-500');
-            remainingBudgetDisplay.classList.remove('text-sky-800');
-            remainingBudgetDisplay.classList.add('text-red-800');
-        } else {
-            remainingBudgetCard.classList.remove('bg-red-50', 'border-red-500');
-            remainingBudgetCard.classList.add('bg-sky-50', 'border-sky-500');
-            remainingBudgetDisplay.classList.remove('text-red-800');
-            remainingBudgetDisplay.classList.add('text-sky-800');
-        }
+        // Tampilkan budget yang sudah ada
+        const existingBudgetsHtml = Object.keys(budgets).map(cat => {
+            return `<div class="p-2 border-b border-slate-200 last:border-b-0 flex justify-between items-center">
+                        <span class="font-semibold text-slate-700">${cat}</span>
+                        <span class="text-slate-500">${formatCurrency(budgets[cat])}</span>
+                    </div>`;
+        }).join('');
+        
+        currentBudgetsContainer.innerHTML = `<h3 class="font-bold text-lg mb-2">Budget yang Sudah Diatur</h3>${existingBudgetsHtml}`;
     };
 
-    saveBudgetBtn.addEventListener('click', () => {
-        const newBudget = parseFloat(initialBudgetInput.value);
+    budgetForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const category = budgetCategorySelect.value;
+        const newBudget = parseFloat(budgetAmountInput.value);
         if (!isNaN(newBudget) && newBudget >= 0) {
-            budget = newBudget;
+            budgets[category] = newBudget;
             saveDataToFirestore();
+            renderBudgetForm();
             openConfirmationModal({
-                title: 'Sukses', message: 'Budget bulanan berhasil diperbarui.',
+                title: 'Sukses', message: `Budget untuk kategori '${category}' berhasil diperbarui.`,
                 confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
                 action: () => {}
             });
+            budgetAmountInput.value = '';
         } else {
             openConfirmationModal({
                 title: 'Error', message: 'Silakan masukkan jumlah budget yang valid.',
@@ -508,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
 
     // --- LOGIKA PELACAK IN/EX ---
     let inExToEditIndex = null;
@@ -816,11 +842,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadAllBtn = document.getElementById('downloadAllBtn');
     const uploadAllInput = document.getElementById('uploadAllInput');
     downloadAllBtn.addEventListener('click', () => {
-        if (transactions.length === 0 && inExTransactions.length === 0) {
+        if (transactions.length === 0 && inExTransactions.length === 0 && Object.keys(budgets).length === 0) {
             openConfirmationModal({ title: 'Info', message: 'Tidak ada data untuk diunduh.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
             return;
         }
-        const allData = { transactions, inExTransactions, budget }; // Sertakan budget dalam data backup
+        const allData = { transactions, inExTransactions, budgets }; // Sertakan budgets dalam data backup
         const dataStr = JSON.stringify(allData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -840,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const data = JSON.parse(event.target.result);
                 // Perbarui validasi file
-                if (!data || !Array.isArray(data.transactions) || !Array.isArray(data.inExTransactions) || typeof data.budget === 'undefined') {
+                if (!data || !Array.isArray(data.transactions) || !Array.isArray(data.inExTransactions) || typeof data.budgets === 'undefined') {
                     throw new Error('Format file JSON tidak valid atau tidak lengkap.');
                 }
                 openConfirmationModal({
@@ -849,7 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     action: () => {
                         transactions = data.transactions || [];
                         inExTransactions = data.inExTransactions || [];
-                        budget = data.budget || 0; // Muat budget dari file
+                        budgets = data.budgets || {}; // Muat budgets dari file
                         saveDataToFirestore();
                         openConfirmationModal({ title: 'Sukses', message: 'Data lokal berhasil dimuat dan akan disinkronkan.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
                     }
