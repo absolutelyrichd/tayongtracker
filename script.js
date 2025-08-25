@@ -19,19 +19,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GLOBAL STATE & UTILITIES ---
     let transactions = [];
     let inExTransactions = [];
+    let budget = 0; // State untuk menyimpan budget bulanan
     let currentUser = null;
-    let unsubscribe = null; // To detach Firestore listener
+    let unsubscribe = null; // Untuk melepaskan listener Firestore
     let dashboardFilterText = '';
-    let dashboardFilterDate = ''; // New state for date filter
+    let dashboardFilterDate = ''; // State baru untuk filter tanggal
     let inExFilterText = '';
-    let inExFilterDate = ''; // New state for IN/EX date filter
+    let inExFilterDate = ''; // State baru untuk filter tanggal IN/EX
     let dashboardChartInstance = null;
     let inExChartInstance = null;
 
-    // Pagination state for dashboard transactions
+    // State paginasi untuk transaksi dashboard
     let currentPage = 1;
     const itemsPerPage = 10;
-    // Pagination state for IN/EX transactions
+    // State paginasi untuk transaksi IN/EX
     let inExCurrentPage = 1;
     const inExItemsPerPage = 10;
 
@@ -46,22 +47,22 @@ document.addEventListener('DOMContentLoaded', () => {
         inputElement.value = new Date().toISOString().slice(0, 10);
     };
 
-    // --- DOM ELEMENTS ---
+    // --- ELEMEN DOM ---
     const authContainer = document.getElementById('authContainer');
     const loginPrompt = document.getElementById('loginPrompt');
     const loginBtn = document.getElementById('loginBtn');
     const mainContent = document.getElementById('mainContent');
     const dashboardSearch = document.getElementById('dashboardSearch');
-    const dashboardDateFilter = document.getElementById('dashboardDateFilter'); // New date filter input
+    const dashboardDateFilter = document.getElementById('dashboardDateFilter'); // Input filter tanggal baru
     const inExSearch = document.getElementById('inExSearch');
-    const inExDateFilter = document.getElementById('inExDateFilter'); // New IN/EX date filter input
+    const inExDateFilter = document.getElementById('inExDateFilter'); // Input filter tanggal IN/EX baru
     
-    // Pagination elements for Dashboard
+    // Elemen paginasi untuk Dashboard
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
     const pageInfo = document.getElementById('pageInfo');
 
-    // Pagination elements for IN/EX
+    // Elemen paginasi untuk IN/EX
     const inExPrevPageBtn = document.getElementById('inExPrevPageBtn');
     const inExNextPageBtn = document.getElementById('inExNextPageBtn');
     const inExPageInfo = document.getElementById('inExPageInfo');
@@ -69,7 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tambahkan elemen tombol back-to-top
     const backToTopBtn = document.getElementById('backToTopBtn');
 
-    // --- AUTHENTICATION ---
+    // Elemen Budget
+    const initialBudgetDisplay = document.getElementById('initialBudgetDisplay');
+    const monthlyExpensesDisplay = document.getElementById('monthlyExpensesDisplay');
+    const remainingBudgetDisplay = document.getElementById('remainingBudgetDisplay');
+    const remainingBudgetCard = document.getElementById('remainingBudgetCard');
+    const initialBudgetInput = document.getElementById('initialBudgetInput');
+    const saveBudgetBtn = document.getElementById('saveBudgetBtn');
+
+    // --- AUTENTIKASI ---
     loginBtn.addEventListener('click', () => {
         auth.signInWithPopup(provider).catch(error => console.error("Login Gagal:", error));
     });
@@ -97,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (unsubscribe) unsubscribe();
             transactions = [];
             inExTransactions = [];
+            budget = 0; // Reset budget
             renderAll();
             loginPrompt.classList.remove('hidden');
             mainContent.classList.add('hidden');
@@ -113,15 +123,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = doc.data();
                 transactions = data.transactions || [];
                 inExTransactions = data.inExTransactions || [];
+                budget = data.budget || 0; // Muat budget dari Firestore
             } else {
                 transactions = [];
                 inExTransactions = [];
+                budget = 0;
             }
-            // Reset to first page when data changes for both tables
+            // Reset ke halaman pertama saat data berubah untuk kedua tabel
             currentPage = 1; 
-            dashboardFilterDate = ''; // Reset dashboard date filter
+            dashboardFilterDate = ''; // Reset filter tanggal dashboard
             inExCurrentPage = 1;
-            inExFilterDate = ''; // Reset IN/EX date filter
+            inExFilterDate = ''; // Reset filter tanggal IN/EX
             renderAll();
         }, error => console.error("Error listening to data:", error));
     };
@@ -130,15 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return;
         try {
             const docRef = db.collection('users').doc(currentUser.uid);
-            await docRef.set({ transactions, inExTransactions });
+            await docRef.set({ transactions, inExTransactions, budget });
         } catch (error) {
             console.error("Error saving data:", error);
         }
     };
 
-    // --- RENDER ALL ---
+    // --- RENDER SEMUA ---
     const renderAll = () => {
         renderSummary();
+        renderBudgetSummary();
         renderTransactions();
         renderInExSummary();
         renderInExTransactions();
@@ -147,47 +160,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- TABS ---
     const tabDashboard = document.getElementById('tabDashboard');
+    const tabBudget = document.getElementById('tabBudget');
     const tabInEx = document.getElementById('tabInEx');
     const tabStats = document.getElementById('tabStats');
     const tabBackup = document.getElementById('tabBackup');
     const dashboardContent = document.getElementById('dashboardContent');
+    const budgetContent = document.getElementById('budgetContent');
     const inExContent = document.getElementById('inExContent');
     const statsContent = document.getElementById('statsContent');
     const backupContent = document.getElementById('backupContent');
     
     function switchTab(activeTab) {
         const isDashboard = activeTab === 'dashboard';
+        const isBudget = activeTab === 'budget';
         const isInEx = activeTab === 'inEx';
         const isStats = activeTab === 'stats';
         const isBackup = activeTab === 'backup';
 
         tabDashboard.classList.toggle('active', isDashboard);
+        tabBudget.classList.toggle('active', isBudget);
         tabInEx.classList.toggle('active', isInEx);
         tabStats.classList.toggle('active', isStats);
         tabBackup.classList.toggle('active', isBackup);
 
         dashboardContent.classList.toggle('hidden', !isDashboard);
+        budgetContent.classList.toggle('hidden', !isBudget);
         inExContent.classList.toggle('hidden', !isInEx);
         statsContent.classList.toggle('hidden', !isStats);
         backupContent.classList.toggle('hidden', !isBackup);
 
-        // Reset filters and pagination when switching tabs
+        // Reset filter dan paginasi saat berpindah tab
         if (isDashboard) {
             dashboardSearch.value = dashboardFilterText;
             dashboardDateFilter.value = dashboardFilterDate;
             renderTransactions();
         } else if (isInEx) {
             inExSearch.value = inExFilterText;
-            inExDateFilter.value = inExFilterDate; // Set IN/EX date filter value
+            inExDateFilter.value = inExFilterDate; // Set nilai filter tanggal IN/EX
             renderInExTransactions();
+        } else if (isBudget) {
+            renderBudgetSummary();
         }
     }
     tabDashboard.addEventListener('click', () => switchTab('dashboard'));
+    tabBudget.addEventListener('click', () => switchTab('budget'));
     tabInEx.addEventListener('click', () => switchTab('inEx'));
     tabStats.addEventListener('click', () => switchTab('stats'));
     tabBackup.addEventListener('click', () => switchTab('backup'));
 
-    // --- GENERIC CONFIRMATION MODAL ---
+    // --- MODAL KONFIRMASI UMUM ---
     const confirmationModal = document.getElementById('confirmationModal');
     const confirmTitle = document.getElementById('confirmTitle');
     const confirmMessage = document.getElementById('confirmMessage');
@@ -216,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelConfirm.addEventListener('click', closeConfirmationModal);
     confirmationModal.addEventListener('click', (e) => { if (e.target === confirmationModal) closeConfirmationModal(); });
     
-    // --- DASHBOARD (DETAILED) LOGIC ---
+    // --- LOGIKA DASHBOARD (DETAIL) ---
     // Update: Tambahkan kategori "Jajan di luar"
     const categories = ['Bulanan', 'Mingguan', 'Saved', 'Tayong', 'Mumih', 'Darurat', 'Jajan di luar'];
     const paymentTypes = ['Cash', 'Gopay'];
@@ -248,24 +269,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentSelect = document.getElementById('payment');
 
     const renderSummary = () => {
-        summarySection.innerHTML = ''; // Clear existing cards
+        summarySection.innerHTML = ''; // Hapus kartu yang sudah ada
         
-        // Add the Total Pengeluaran card first
+        // Tambahkan kartu Total Pengeluaran terlebih dahulu
         const totalExpensesCard = document.createElement('div');
         totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
-        totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">Rp0</p>`; // Adjusted font size here
+        totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">Rp0</p>`; // Menyesuaikan ukuran font di sini
         summarySection.appendChild(totalExpensesCard);
 
-        // Calculate and display total expenses
+        // Hitung dan tampilkan total pengeluaran
         const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
         document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
 
-        // Add other category cards
+        // Tambahkan kartu kategori lainnya
         categories.forEach(category => {
             const total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
             const card = document.createElement('div');
             card.className = 'summary-card';
-            card.innerHTML = `<h3 class="font-semibold text-slate-500">${category}</h3><p class="text-xl font-bold mt-2 text-slate-800">${formatCurrency(total)}</p>`; // Adjusted font size here
+            card.innerHTML = `<h3 class="font-semibold text-slate-500">${category}</h3><p class="text-xl font-bold mt-2 text-slate-800">${formatCurrency(total)}</p>`; // Menyesuaikan ukuran font di sini
             summarySection.appendChild(card);
         });
     };
@@ -280,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchesText && matchesDate;
         });
 
-        // Sort filtered transactions by date (newest first)
+        // Urutkan transaksi yang difilter berdasarkan tanggal (terbaru pertama)
         filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const groupedByDate = filteredTransactions.reduce((acc, t) => {
@@ -290,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
         
-        // Pagination logic based on dates
+        // Logika paginasi berdasarkan tanggal
         const totalPages = Math.ceil(sortedDates.length / itemsPerPage);
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
@@ -303,11 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const dailyTransactions = groupedByDate[date];
             const dailyTotal = dailyTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-            // Create the card for the day
+            // Buat kartu untuk hari itu
             const dailyCard = document.createElement('div');
             dailyCard.className = 'bg-white p-4 rounded-xl shadow-lg border-2 border-slate-200 mb-4';
 
-            // Create the header with date and daily total
+            // Buat header dengan tanggal dan total harian
             const header = document.createElement('div');
             header.className = 'flex justify-between items-center mb-2 pb-2 border-b border-slate-200';
             header.innerHTML = `
@@ -321,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             dailyCard.appendChild(header);
 
-            // Create the list of transactions for that day
+            // Buat daftar transaksi untuk hari itu
             dailyTransactions.forEach(t => {
                 const transactionItem = document.createElement('div');
                 transactionItem.className = 'flex justify-between items-center py-2 border-b border-slate-100 last:border-b-0';
@@ -344,13 +365,13 @@ document.addEventListener('DOMContentLoaded', () => {
             dashboardTransactionContainer.appendChild(dailyCard);
         });
 
-        // Update pagination controls
+        // Perbarui kontrol paginasi
         pageInfo.textContent = `Halaman ${currentPage} dari ${totalPages || 1}`;
         prevPageBtn.disabled = currentPage === 1;
         nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
     };
     
-    // Event listeners for pagination buttons
+    // Event listener untuk tombol paginasi
     prevPageBtn.addEventListener('click', () => {
         if (currentPage > 1) {
             currentPage--;
@@ -402,15 +423,17 @@ document.addEventListener('DOMContentLoaded', () => {
     transactionForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const transactionData = { date: dateInput.value, category: categorySelect.value, detail: detailInput.value, amount: parseFloat(amountInput.value), payment: paymentSelect.value };
+        
         if (transactionToEditIndex !== null && transactionToEditIndex > -1) {
             transactions[transactionToEditIndex] = { ...transactions[transactionToEditIndex], ...transactionData };
         } else {
             transactions.unshift({ ...transactionData, id: Date.now() });
         }
+        
         saveDataToFirestore();
         closeTransactionModal();
     });
-    // Event listener for edit/delete buttons on the new card view
+    // Event listener untuk tombol edit/hapus pada tampilan kartu baru
     dashboardTransactionContainer.addEventListener('click', (e) => {
         const editButton = e.target.closest('.edit-btn');
         if (editButton) return openEditModal(editButton.dataset.id);
@@ -426,12 +449,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     dashboardSearch.addEventListener('input', e => {
         dashboardFilterText = e.target.value;
-        currentPage = 1; // Reset to first page on new search
+        currentPage = 1; // Kembali ke halaman pertama saat pencarian baru
         renderTransactions();
     });
-    dashboardDateFilter.addEventListener('change', e => { // Event listener for date filter
+    dashboardDateFilter.addEventListener('change', e => { // Event listener untuk filter tanggal
         dashboardFilterDate = e.target.value;
-        currentPage = 1; // Reset to first page on new date filter
+        currentPage = 1; // Kembali ke halaman pertama saat filter tanggal baru
         renderTransactions();
     });
     [categorySelect, paymentSelect].forEach(sel => sel.innerHTML = '');
@@ -441,7 +464,52 @@ document.addEventListener('DOMContentLoaded', () => {
     closeTransactionModalBtn.addEventListener('click', closeTransactionModal);
     addTransactionModal.addEventListener('click', (e) => { if (e.target === addTransactionModal) closeTransactionModal(); });
 
-    // --- IN/EX TRACKER LOGIC ---
+    // --- LOGIKA BUDGET BULANAN BARU ---
+    const renderBudgetSummary = () => {
+        const totalMonthlyExpenses = transactions
+            .filter(t => t.category === 'Bulanan')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const remainingBudget = budget - totalMonthlyExpenses;
+
+        initialBudgetDisplay.textContent = formatCurrency(budget);
+        monthlyExpensesDisplay.textContent = formatCurrency(totalMonthlyExpenses);
+        remainingBudgetDisplay.textContent = formatCurrency(remainingBudget);
+
+        // Perbarui warna kartu sisa budget
+        if (remainingBudget < 0) {
+            remainingBudgetCard.classList.remove('bg-sky-50', 'border-sky-500');
+            remainingBudgetCard.classList.add('bg-red-50', 'border-red-500');
+            remainingBudgetDisplay.classList.remove('text-sky-800');
+            remainingBudgetDisplay.classList.add('text-red-800');
+        } else {
+            remainingBudgetCard.classList.remove('bg-red-50', 'border-red-500');
+            remainingBudgetCard.classList.add('bg-sky-50', 'border-sky-500');
+            remainingBudgetDisplay.classList.remove('text-red-800');
+            remainingBudgetDisplay.classList.add('text-sky-800');
+        }
+    };
+
+    saveBudgetBtn.addEventListener('click', () => {
+        const newBudget = parseFloat(initialBudgetInput.value);
+        if (!isNaN(newBudget) && newBudget >= 0) {
+            budget = newBudget;
+            saveDataToFirestore();
+            openConfirmationModal({
+                title: 'Sukses', message: 'Budget bulanan berhasil diperbarui.',
+                confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                action: () => {}
+            });
+        } else {
+            openConfirmationModal({
+                title: 'Error', message: 'Silakan masukkan jumlah budget yang valid.',
+                confirmText: 'OK', confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700',
+                action: () => {}
+            });
+        }
+    });
+
+    // --- LOGIKA PELACAK IN/EX ---
     let inExToEditIndex = null;
     const inTotalEl = document.getElementById('inTotal');
     const exTotalEl = document.getElementById('exTotal');
@@ -484,10 +552,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return acc;
         }, {});
         
-        // Sort the dates (keys) to ensure correct order
+        // Urutkan tanggal (kunci) untuk memastikan urutan yang benar
         const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
         
-        // Pagination logic for IN/EX
+        // Logika paginasi untuk IN/EX
         const inExTotalPages = Math.ceil(sortedDates.length / inExItemsPerPage);
         const inExStartIndex = (inExCurrentPage - 1) * inExItemsPerPage;
         const inExEndIndex = inExStartIndex + inExItemsPerPage;
@@ -505,11 +573,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return sum + t.amount;
             }, 0);
 
-            // Create the card for the day
+            // Buat kartu untuk hari itu
             const dailyCard = document.createElement('div');
             dailyCard.className = 'bg-white p-4 rounded-xl shadow-lg border-2 border-slate-200 mb-4';
 
-            // Create the header with date and daily total
+            // Buat header dengan tanggal dan total harian
             const header = document.createElement('div');
             header.className = 'flex justify-between items-center mb-2 pb-2 border-b border-slate-200';
             header.innerHTML = `
@@ -523,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             dailyCard.appendChild(header);
 
-            // Create the list of transactions for that day
+            // Buat daftar transaksi untuk hari itu
             dailyTransactions.forEach(t => {
                 const isIncome = t.category === 'IN';
                 const transactionItem = document.createElement('div');
@@ -547,13 +615,13 @@ document.addEventListener('DOMContentLoaded', () => {
             inExContainer.appendChild(dailyCard);
         });
 
-        // Update pagination controls for IN/EX
+        // Perbarui kontrol paginasi untuk IN/EX
         inExPageInfo.textContent = `Halaman ${inExCurrentPage} dari ${inExTotalPages || 1}`;
         inExPrevPageBtn.disabled = inExCurrentPage === 1;
         inExNextPageBtn.disabled = inExCurrentPage === inExTotalPages || inExTotalPages === 0;
     };
 
-    // Event listeners for IN/EX pagination buttons
+    // Event listener untuk tombol paginasi IN/EX
     inExPrevPageBtn.addEventListener('click', () => {
         if (inExCurrentPage > 1) {
             inExCurrentPage--;
@@ -580,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // The rest of the IN/EX logic remains the same
+    // Sisa logika IN/EX tetap sama
     const openAddInExModal = () => {
         inExToEditIndex = null;
         inExForm.reset();
@@ -611,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveDataToFirestore();
         closeInExModal();
     });
-    // Event listener for edit/delete buttons on the new card view
+    // Event listener untuk tombol edit/hapus pada tampilan kartu baru
     inExContent.addEventListener('click', (e) => {
         const editButton = e.target.closest('.edit-btn');
         if (editButton) return openEditInExModal(editButton.dataset.id);
@@ -627,19 +695,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     inExSearch.addEventListener('input', e => {
         inExFilterText = e.target.value;
-        inExCurrentPage = 1; // Reset to first page on new search
+        inExCurrentPage = 1; // Kembali ke halaman pertama saat pencarian baru
         renderInExTransactions();
     });
-    inExDateFilter.addEventListener('change', e => { // New event listener for IN/EX date filter
+    inExDateFilter.addEventListener('change', e => { // Event listener baru untuk filter tanggal IN/EX
         inExFilterDate = e.target.value;
-        inExCurrentPage = 1; // Reset to first page on new date filter
+        inExCurrentPage = 1; // Kembali ke halaman pertama saat filter tanggal baru
         renderInExTransactions();
     });
     openInExModalBtn.addEventListener('click', openAddInExModal);
     closeInExModalBtn.addEventListener('click', closeInExModal);
     inExModal.addEventListener('click', (e) => { if (e.target === inExModal) closeInExModal(); });
 
-    // --- STATS LOGIC ---
+    // --- LOGIKA STATISTIK ---
     const renderDashboardStats = () => {
         const ctx = document.getElementById('dashboardChart').getContext('2d');
         const categoryTotals = categories.map(category => {
@@ -744,7 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderInExStats();
     };
 
-    // --- BACKUP MANAGEMENT LOGIC ---
+    // --- LOGIKA MANAJEMEN BACKUP ---
     const downloadAllBtn = document.getElementById('downloadAllBtn');
     const uploadAllInput = document.getElementById('uploadAllInput');
     downloadAllBtn.addEventListener('click', () => {
@@ -752,7 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
             openConfirmationModal({ title: 'Info', message: 'Tidak ada data untuk diunduh.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
             return;
         }
-        const allData = { transactions, inExTransactions };
+        const allData = { transactions, inExTransactions, budget }; // Sertakan budget dalam data backup
         const dataStr = JSON.stringify(allData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -771,13 +839,17 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                if (!data || !Array.isArray(data.transactions) || !Array.isArray(data.inExTransactions)) throw new Error('Format file JSON tidak valid atau tidak lengkap.');
+                // Perbarui validasi file
+                if (!data || !Array.isArray(data.transactions) || !Array.isArray(data.inExTransactions) || typeof data.budget === 'undefined') {
+                    throw new Error('Format file JSON tidak valid atau tidak lengkap.');
+                }
                 openConfirmationModal({
                     title: 'Muat Data Lokal', message: 'Ini akan menimpa data saat ini dengan data dari file. Data baru akan disinkronkan ke cloud. Yakin?',
                     confirmText: 'Ya, Timpa & Sinkronkan', confirmClass: 'px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors',
                     action: () => {
                         transactions = data.transactions || [];
                         inExTransactions = data.inExTransactions || [];
+                        budget = data.budget || 0; // Muat budget dari file
                         saveDataToFirestore();
                         openConfirmationModal({ title: 'Sukses', message: 'Data lokal berhasil dimuat dan akan disinkronkan.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
                     }
