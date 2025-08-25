@@ -47,8 +47,10 @@
             font-size: 0.875rem; /* text-sm */
         }
         /* Adjusted font size for the amount in summary cards */
-        .summary-card p {
-            font-size: 1.25rem; /* text-xl, reduced from text-2xl */
+        .summary-card .amount-text {
+            font-size: 1rem; /* text-base */
+            font-weight: 700; /* font-bold */
+            margin-top: 0.25rem;
         }
         .modal-backdrop {
             position: fixed;
@@ -167,13 +169,6 @@
         /* Sesuaikan padding di bagian atas mainContent untuk memperhitungkan jarak baru */
         #mainContent {
             padding-top: 3rem;
-        }
-
-        /* Gaya baru untuk teks jumlah yang lebih kecil pada kartu ringkasan */
-        .summary-card .amount-text {
-            font-size: 1.125rem; /* text-lg */
-            font-weight: 700; /* font-bold */
-            margin-top: 0.5rem;
         }
         
     </style>
