@@ -182,7 +182,7 @@
                 <p class="text-slate-500 mt-2">Lacak pengeluaran dan pemasukan Anda dengan mudah.</p>
             </div>
             <div id="authContainer" class="w-full md:w-auto flex justify-center md:justify-end">
-                <!-- Konten autentikasi akan disuntikkan di sini -->
+                <!-- Auth content will be injected here -->
             </div>
         </header>
         
@@ -201,9 +201,9 @@
             <div id="sticky-tabs" class="mb-6">
                 <nav class="flex flex-wrap justify-center" aria-label="Tabs">
                     <button id="tabDashboard" class="tab-btn active">Umum</button>
-                    <button id="tabBudget" class="tab-btn">Atur Budget</button>
                     <button id="tabInEx" class="tab-btn">Uang Tayong</button>
                     <button id="tabStats" class="tab-btn">Statistik</button>
+                    <button id="tabBudget" class="tab-btn">Anggaran</button>
                     <button id="tabBackup" class="tab-btn">Manajemen Backup</button>
                 </nav>
             </div>
@@ -212,9 +212,8 @@
             <div id="tabContent">
                 <!-- Dashboard Utama Content -->
                 <div id="dashboardContent">
-                    <!-- Cards are now dynamically generated in JS -->
-                    <section id="summarySection" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
-                        <!-- Summary and Budget Cards will be dynamically added here by JavaScript -->
+                    <section id="summarySection" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 mb-8">
+                        <!-- Card for Total Pengeluaran will be dynamically added here -->
                     </section>
                     <div class="bg-white p-6 rounded-xl shadow-lg">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
@@ -227,41 +226,16 @@
                                 </button>
                             </div>
                         </div>
-                        <!-- Kontainer baru untuk tampilan kartu -->
+                        <!-- New container for the card view -->
                         <div id="dashboardTransactionContainer" class="space-y-4">
-                            <!-- Kartu akan ditambahkan secara dinamis di sini -->
+                            <!-- Cards will be dynamically added here -->
                         </div>
                         <p id="emptyState" class="text-center text-slate-500 py-8 hidden">Belum ada transaksi.</p>
-                        <!-- Kontrol Paginasi -->
+                        <!-- Pagination Controls -->
                         <div id="dashboardPagination" class="flex justify-center items-center gap-2 mt-4">
                             <button id="prevPageBtn" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">Sebelumnya</button>
                             <span id="pageInfo" class="text-slate-600 text-sm">Halaman 1 dari 1</span>
                             <button id="nextPageBtn" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">Berikutnya</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Budget Content Baru (Hanya untuk Input) -->
-                <div id="budgetContent" class="hidden">
-                    <div class="bg-white p-6 rounded-xl shadow-lg max-w-lg mx-auto">
-                        <h2 class="text-xl font-bold mb-4">Atur Budget Per Kategori</h2>
-                        <p class="text-slate-500 mb-6">Atur budget bulanan Anda untuk setiap kategori pengeluaran.</p>
-                        <form id="budgetForm" class="space-y-4">
-                            <div>
-                                <label for="budgetCategorySelect" class="block text-sm font-medium text-slate-600">Pilih Kategori</label>
-                                <select id="budgetCategorySelect" name="category" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"></select>
-                            </div>
-                            <div>
-                                <label for="budgetAmountInput" class="block text-sm font-medium text-slate-600">Jumlah Budget (Rp)</label>
-                                <input type="number" id="budgetAmountInput" placeholder="Contoh: 1000000" min="0" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-                            </div>
-                            <button type="submit" id="saveBudgetBtn" class="w-full bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors">
-                                <i class="fas fa-save mr-2"></i>Simpan Budget
-                            </button>
-                        </form>
-                        <div id="currentBudgets" class="mt-8">
-                             <h3 class="font-bold text-lg mb-2">Budget yang Sudah Diatur</h3>
-                             <!-- Budget list will be rendered here dynamically -->
                         </div>
                     </div>
                 </div>
@@ -293,12 +267,12 @@
                                 </button>
                             </div>
                         </div>
-                        <!-- Kontainer baru untuk tampilan kartu -->
+                        <!-- New container for the card view -->
                         <div id="inExContainer" class="space-y-4">
-                            <!-- Kartu akan ditambahkan secara dinamis di sini -->
+                            <!-- Cards will be dynamically added here -->
                         </div>
                         <p id="inExEmptyState" class="text-center text-slate-500 py-8 hidden">Belum ada catatan IN/EX.</p>
-                        <!-- Kontrol Paginasi untuk IN/EX -->
+                        <!-- Pagination Controls for IN/EX -->
                         <div id="inExPagination" class="flex justify-center items-center gap-2 mt-4">
                             <button id="inExPrevPageBtn" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">Sebelumnya</button>
                             <span id="inExPageInfo" class="text-slate-600 text-sm">Halaman 1 dari 1</span>
@@ -325,6 +299,22 @@
                     </div>
                 </div>
                 
+                <!-- NEW Budget Content -->
+                <div id="budgetContent" class="hidden">
+                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-bold mb-4">Atur Anggaran Kategori</h2>
+                        <p class="text-slate-500 mb-6">Tetapkan batas pengeluaran bulanan untuk setiap kategori. Anggaran akan ditampilkan di kartu kategori Anda.</p>
+                        <form id="budgetForm" class="space-y-4">
+                            <div id="budgetInputsContainer">
+                                <!-- Budget inputs will be dynamically added here -->
+                            </div>
+                            <button type="submit" class="w-full bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">
+                                <i class="fas fa-save mr-2"></i>Simpan Anggaran
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Backup Management Content -->
                 <div id="backupContent" class="hidden">
                     <div class="bg-white p-6 rounded-xl shadow-lg">
