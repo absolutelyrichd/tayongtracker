@@ -502,6 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
             const card = document.createElement('div');
             card.className = 'summary-card';
+            
+            // Logika baru untuk hanya menampilkan Anggaran dan Sisa
             card.innerHTML = `
                 <h3 class="font-semibold text-slate-500">${category}</h3>
                 <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
@@ -607,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lowercasedFilter = inExFilterText.toLowerCase();
         const filteredInExTransactions = inExTransactions.filter(t =>
             (t.detail.toLowerCase().includes(lowercasedFilter) ||
-            t.category.toLowerCase().includes(lowcasedFilter)) &&
+            t.category.toLowerCase().includes(lowercasedFilter)) &&
             (inExFilterDate === '' || t.date === inExFilterDate)
         );
         const groupedByDate = filteredInExTransactions.reduce((acc, t) => {
