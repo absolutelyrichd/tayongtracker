@@ -648,8 +648,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inExToEditIndex !== null && inExToEditIndex > -1) {
             inExTransactions[inExToEditIndex] = { ...inExTransactions[inExToEditIndex], ...inExData };
         } else {
-            // Pengeluaran pada Uang Tayong selalu dicatat sebagai negatif
-            inExTransactions.unshift({ ...inExData, amount: -inExData.amount, id: Date.now() });
+            // Perbaikan bug: jangan ubah jumlah menjadi negatif
+            inExTransactions.unshift({ ...inExData, amount: inExData.amount, id: Date.now() });
         }
         saveDataToFirestore();
         closeInExModal();
