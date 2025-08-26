@@ -515,15 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return totalSum + remaining;
         }, 0);
         
-        // Kartu total sisa anggaran
-        const overallTotalCard = document.createElement('div');
-        const overallTotalColor = inExOverallTotal >= 0 ? 'text-sky-800' : 'text-red-800';
-        overallTotalCard.className = `summary-card bg-sky-50 border-l-4 border-sky-500`;
-        overallTotalCard.innerHTML = `
-            <h3 class="font-semibold text-sky-700">Total Sisa Anggaran</h3>
-            <p class="amount-text ${overallTotalColor} mt-2">${formatCurrency(inExOverallTotal)}</p>
-        `;
-        inExSummarySection.appendChild(overallTotalCard);
     };
 
     const renderInExTransactions = () => {
