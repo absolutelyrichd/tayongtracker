@@ -503,7 +503,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'summary-card';
             
-            // Logika baru untuk hanya menampilkan Anggaran dan Sisa
             card.innerHTML = `
                 <h3 class="font-semibold text-slate-500">${category}</h3>
                 <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
