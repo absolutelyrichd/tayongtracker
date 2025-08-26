@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToTopBtn = document.getElementById('backToTopBtn');
 
     // Elemen untuk Anggaran
-    const tabBudget = document.getElementById('tabBudget');
+
     const budgetContent = document.getElementById('budgetContent');
     const budgetForm = document.getElementById('budgetForm');
     const budgetInputsContainer = document.getElementById('budgetInputsContainer');
