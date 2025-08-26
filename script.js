@@ -19,20 +19,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GLOBAL STATE & UTILITIES ---
     let transactions = [];
     let inExTransactions = [];
-    let budgets = {}; // State baru untuk menyimpan data anggaran
+    let budgets = {}; // State untuk menyimpan data anggaran
     let currentUser = null;
-    let unsubscribe = null; // To detach Firestore listener
+    let unsubscribe = null; // Untuk melepaskan listener Firestore
     let dashboardFilterText = '';
-    let dashboardFilterDate = ''; // New state for date filter
+    let dashboardFilterDate = '';
     let inExFilterText = '';
-    let inExFilterDate = ''; // New state for IN/EX date filter
+    let inExFilterDate = '';
     let dashboardChartInstance = null;
     let inExChartInstance = null;
 
-    // Pagination state for dashboard transactions
+    // Kategori untuk tab "Umum"
+    const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar'];
+    // Kategori baru untuk tab "Uang Tayong"
+    const inExCategories = ['Harian', 'Weekend', 'Fleksibel'];
+
+    // Pagination state
     let currentPage = 1;
     const itemsPerPage = 10;
-    // Pagination state for IN/EX transactions
     let inExCurrentPage = 1;
     const inExItemsPerPage = 10;
 
@@ -53,24 +57,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginBtn = document.getElementById('loginBtn');
     const mainContent = document.getElementById('mainContent');
     const dashboardSearch = document.getElementById('dashboardSearch');
-    const dashboardDateFilter = document.getElementById('dashboardDateFilter'); // New date filter input
+    const dashboardDateFilter = document.getElementById('dashboardDateFilter');
     const inExSearch = document.getElementById('inExSearch');
-    const inExDateFilter = document.getElementById('inExDateFilter'); // New IN/EX date filter input
+    const inExDateFilter = document.getElementById('inExDateFilter');
     
-    // Pagination elements for Dashboard
+    // Pagination elements
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
     const pageInfo = document.getElementById('pageInfo');
-
-    // Pagination elements for IN/EX
     const inExPrevPageBtn = document.getElementById('inExPrevPageBtn');
     const inExNextPageBtn = document.getElementById('inExNextPageBtn');
     const inExPageInfo = document.getElementById('inExPageInfo');
-
-    // Tambahkan elemen tombol back-to-top
     const backToTopBtn = document.getElementById('backToTopBtn');
 
-    // Elemen baru untuk tab Anggaran
+    // Elemen untuk Anggaran
     const tabBudget = document.getElementById('tabBudget');
     const budgetContent = document.getElementById('budgetContent');
     const budgetForm = document.getElementById('budgetForm');
@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = user;
             loginPrompt.classList.add('hidden');
             mainContent.classList.remove('hidden');
-            // Konten yang disuntikkan untuk authContainer, disesuaikan agar responsif
             authContainer.innerHTML = `
                 <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
                     <img src="${user.photoURL}" alt="User Photo" class="w-10 h-10 rounded-full">
@@ -104,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (unsubscribe) unsubscribe();
             transactions = [];
             inExTransactions = [];
-            budgets = {}; // Reset budgets on logout
+            budgets = {};
             renderAll();
             loginPrompt.classList.remove('hidden');
             mainContent.classList.add('hidden');
@@ -121,17 +120,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = doc.data();
                 transactions = data.transactions || [];
                 inExTransactions = data.inExTransactions || [];
-                budgets = data.budgets || {}; // Muat data anggaran
+                budgets = data.budgets || {};
             } else {
                 transactions = [];
                 inExTransactions = [];
-                budgets = {}; // Atur ke objek kosong jika dokumen tidak ada
+                budgets = {};
             }
-            // Reset to first page when data changes for both tables
             currentPage = 1; 
-            dashboardFilterDate = ''; // Reset dashboard date filter
+            dashboardFilterDate = '';
             inExCurrentPage = 1;
-            inExFilterDate = ''; // Reset IN/EX date filter
+            inExFilterDate = '';
             renderAll();
         }, error => console.error("Error listening to data:", error));
     };
@@ -140,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return;
         try {
             const docRef = db.collection('users').doc(currentUser.uid);
-            await docRef.set({ transactions, inExTransactions, budgets }); // Simpan data anggaran
+            await docRef.set({ transactions, inExTransactions, budgets });
         } catch (error) {
             console.error("Error saving data:", error);
         }
@@ -181,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardContent.classList.toggle('hidden', !isDashboard);
         inExContent.classList.toggle('hidden', !isInEx);
         statsContent.classList.toggle('hidden', !isStats);
-        budgetContent.classList.toggle('hidden', !isBudget); // Tampilkan konten anggaran
+        budgetContent.classList.toggle('hidden', !isBudget);
         backupContent.classList.toggle('hidden', !isBackup);
 
         // Reset filters and pagination when switching tabs
@@ -191,10 +189,12 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTransactions();
         } else if (isInEx) {
             inExSearch.value = inExFilterText;
-            inExDateFilter.value = inExFilterDate; // Set IN/EX date filter value
+            inExDateFilter.value = inExFilterDate;
             renderInExTransactions();
-        } else if (isBudget) { // Render budget inputs when switching to this tab
+        } else if (isBudget) {
             renderBudgetInputs();
+        } else if (isStats) {
+            renderAllStats();
         }
     }
     tabDashboard.addEventListener('click', () => switchTab('dashboard'));
@@ -232,23 +232,18 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelConfirm.addEventListener('click', closeConfirmationModal);
     confirmationModal.addEventListener('click', (e) => { if (e.target === confirmationModal) closeConfirmationModal(); });
     
-    // --- DASHBOARD (DETAILED) LOGIC ---
-    // Update: Tambahkan kategori "Jajan di luar"
-    const categories = ['Bulanan', 'Mingguan', 'Saved', 'Tayong', 'Mumih', 'Darurat', 'Jajan di luar'];
+    // --- DASHBOARD (UMUM) LOGIC ---
     const paymentTypes = ['Cash', 'Gopay'];
-    // Update: Tambahkan warna untuk kategori "Jajan di luar"
     const categoryColors = { 
         'Bulanan': 'bg-red-100 text-red-800',
         'Mingguan': 'bg-orange-100 text-orange-800',
         'Saved': 'bg-gray-100 text-gray-800',
         'Mumih': 'bg-blue-100 text-blue-800',
         'Darurat': 'bg-purple-100 text-purple-800',
-        'Tayong': 'bg-green-100 text-green-800',
-        'Jajan di luar': 'bg-yellow-100 text-yellow-800' // Warna baru untuk kategori baru
+        'Jajan di luar': 'bg-yellow-100 text-yellow-800'
     };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
-    const totalExpensesEl = document.getElementById('totalExpenses');
     const dashboardTransactionContainer = document.getElementById('dashboardTransactionContainer');
     const emptyState = document.getElementById('emptyState');
     const addTransactionModal = document.getElementById('addTransactionModal');
@@ -264,35 +259,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentSelect = document.getElementById('payment');
 
     const renderSummary = () => {
-        summarySection.innerHTML = ''; // Clear existing cards
+        summarySection.innerHTML = '';
         
         // Add the Total Pengeluaran card first
+        const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
         const totalExpensesCard = document.createElement('div');
         totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
-        totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">Rp0</p>`; // Adjusted font size here
+        totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">${formatCurrency(totalExpenses)}</p>`;
         summarySection.appendChild(totalExpensesCard);
 
-        // Calculate and display total expenses
-        const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
-        document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
-
-        // Add other category cards
-        categories.forEach(category => {
+        dashboardCategories.forEach(category => {
             const total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
-            const budget = budgets[category] || 0;
-            const remaining = budget - total;
-            const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
-
+            
             const card = document.createElement('div');
             card.className = 'summary-card';
-            card.innerHTML = `
-                <h3 class="font-semibold text-slate-500">${category}</h3>
-                <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
-                <div class="border-t border-dashed mt-2 pt-2">
-                    <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
-                    <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
-                </div>
-            `;
+            
+            if (['Saved', 'Darurat'].includes(category)) {
+                // Untuk Saved dan Darurat, jangan pakai anggaran
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-500">${category}</h3>
+                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                `;
+            } else {
+                const budget = budgets[category] || 0;
+                const remaining = budget - total;
+                const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-500">${category}</h3>
+                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                    <div class="border-t border-dashed mt-2 pt-2">
+                        <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                        <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                    </div>
+                `;
+            }
             summarySection.appendChild(card);
         });
     };
@@ -307,7 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchesText && matchesDate;
         });
 
-        // Sort filtered transactions by date (newest first)
         filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const groupedByDate = filteredTransactions.reduce((acc, t) => {
@@ -317,7 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
         
-        // Pagination logic based on dates
         const totalPages = Math.ceil(sortedDates.length / itemsPerPage);
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
@@ -329,12 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
         datesToDisplay.forEach(date => {
             const dailyTransactions = groupedByDate[date];
             const dailyTotal = dailyTransactions.reduce((sum, t) => sum + t.amount, 0);
-
-            // Create the card for the day
             const dailyCard = document.createElement('div');
             dailyCard.className = 'bg-white p-4 rounded-xl shadow-lg border-2 border-slate-200 mb-4';
-
-            // Create the header with date and daily total
             const header = document.createElement('div');
             header.className = 'flex justify-between items-center mb-2 pb-2 border-b border-slate-200';
             header.innerHTML = `
@@ -348,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             dailyCard.appendChild(header);
 
-            // Create the list of transactions for that day
             dailyTransactions.forEach(t => {
                 const transactionItem = document.createElement('div');
                 transactionItem.className = 'flex justify-between items-center py-2 border-b border-slate-100 last:border-b-0';
@@ -437,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveDataToFirestore();
         closeTransactionModal();
     });
-    // Event listener for edit/delete buttons on the new card view
+    
     dashboardTransactionContainer.addEventListener('click', (e) => {
         const editButton = e.target.closest('.edit-btn');
         if (editButton) return openEditModal(editButton.dataset.id);
@@ -453,26 +446,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     dashboardSearch.addEventListener('input', e => {
         dashboardFilterText = e.target.value;
-        currentPage = 1; // Reset to first page on new search
+        currentPage = 1;
         renderTransactions();
     });
-    dashboardDateFilter.addEventListener('change', e => { // Event listener for date filter
+    dashboardDateFilter.addEventListener('change', e => {
         dashboardFilterDate = e.target.value;
-        currentPage = 1; // Reset to first page on new date filter
+        currentPage = 1;
         renderTransactions();
     });
     [categorySelect, paymentSelect].forEach(sel => sel.innerHTML = '');
-    categories.forEach(cat => categorySelect.add(new Option(cat, cat)));
+    dashboardCategories.forEach(cat => categorySelect.add(new Option(cat, cat)));
     paymentTypes.forEach(pay => paymentSelect.add(new Option(pay, pay)));
     openTransactionModalBtn.addEventListener('click', openAddModal);
     closeTransactionModalBtn.addEventListener('click', closeTransactionModal);
     addTransactionModal.addEventListener('click', (e) => { if (e.target === addTransactionModal) closeTransactionModal(); });
 
-    // --- IN/EX TRACKER LOGIC ---
+    // --- IN/EX TRACKER (UANG TAYONG) LOGIC ---
     let inExToEditIndex = null;
-    const inTotalEl = document.getElementById('inTotal');
-    const exTotalEl = document.getElementById('exTotal');
-    const finalTotalEl = document.getElementById('finalTotal');
+    const inExSummarySection = document.getElementById('inExSummarySection');
     const inExContainer = document.getElementById('inExContainer');
     const inExEmptyState = document.getElementById('inExEmptyState');
     const inExModal = document.getElementById('inExModal');
@@ -487,13 +478,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const inExAmount = document.getElementById('inExAmount');
     
     const renderInExSummary = () => {
-        const totalIn = inExTransactions.filter(t => t.category === 'IN').reduce((sum, t) => sum + t.amount, 0);
-        const totalEx = inExTransactions.filter(t => t.category === 'EX').reduce((sum, t) => sum + t.amount, 0);
-        inTotalEl.textContent = formatCurrency(totalIn);
-        exTotalEl.textContent = formatCurrency(totalEx);
-        finalTotalEl.textContent = formatCurrency(totalIn - totalEx);
-        finalTotalEl.classList.toggle('text-red-800', (totalIn - totalEx) < 0);
-        finalTotalEl.classList.toggle('text-sky-800', (totalIn - totalEx) >= 0);
+        inExSummarySection.innerHTML = '';
+        const inExOverallTotal = inExCategories.reduce((totalSum, category) => {
+            const total = inExTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+            const budget = budgets[category] || 0;
+            const remaining = budget - total;
+            
+            const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+            const card = document.createElement('div');
+            card.className = 'summary-card';
+            card.innerHTML = `
+                <h3 class="font-semibold text-slate-500">${category}</h3>
+                <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                <div class="border-t border-dashed mt-2 pt-2">
+                    <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                    <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                </div>
+            `;
+            inExSummarySection.appendChild(card);
+            return totalSum + remaining;
+        }, 0);
+        
+        // Kartu total sisa anggaran
+        const overallTotalCard = document.createElement('div');
+        const overallTotalColor = inExOverallTotal >= 0 ? 'text-sky-800' : 'text-red-800';
+        overallTotalCard.className = `summary-card bg-sky-50 border-l-4 border-sky-500`;
+        overallTotalCard.innerHTML = `
+            <h3 class="font-semibold text-sky-700">Total Sisa Anggaran</h3>
+            <p class="amount-text ${overallTotalColor} mt-2">${formatCurrency(inExOverallTotal)}</p>
+        `;
+        inExSummarySection.appendChild(overallTotalCard);
     };
 
     const renderInExTransactions = () => {
@@ -511,10 +525,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return acc;
         }, {});
         
-        // Sort the dates (keys) to ensure correct order
         const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
         
-        // Pagination logic for IN/EX
         const inExTotalPages = Math.ceil(sortedDates.length / inExItemsPerPage);
         const inExStartIndex = (inExCurrentPage - 1) * inExItemsPerPage;
         const inExEndIndex = inExStartIndex + inExItemsPerPage;
@@ -525,18 +537,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         datesToDisplay.forEach(date => {
             const dailyTransactions = groupedByDate[date];
-            const dailyTotal = dailyTransactions.reduce((sum, t) => {
-                return sum + (t.category === 'IN' ? t.amount : -t.amount);
-            }, 0);
-            const dailyTotalInEx = dailyTransactions.reduce((sum, t) => {
-                return sum + t.amount;
-            }, 0);
+            const dailyTotal = dailyTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-            // Create the card for the day
             const dailyCard = document.createElement('div');
             dailyCard.className = 'bg-white p-4 rounded-xl shadow-lg border-2 border-slate-200 mb-4';
-
-            // Create the header with date and daily total
             const header = document.createElement('div');
             header.className = 'flex justify-between items-center mb-2 pb-2 border-b border-slate-200';
             header.innerHTML = `
@@ -545,26 +549,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div>
                     <span class="text-sm text-slate-500">Total: </span>
-                    <span class="font-bold text-slate-800">${formatCurrency(dailyTotal)}</span>
+                    <span class="font-bold text-red-600">${formatCurrency(dailyTotal)}</span>
                 </div>
             `;
             dailyCard.appendChild(header);
 
-            // Create the list of transactions for that day
             dailyTransactions.forEach(t => {
-                const isIncome = t.category === 'IN';
                 const transactionItem = document.createElement('div');
                 transactionItem.className = 'flex justify-between items-center py-2 border-b border-slate-100 last:border-b-0';
                 transactionItem.innerHTML = `
                     <div class="flex items-center gap-3 flex-grow">
-                        <i class="fas fa-${isIncome ? 'plus' : 'minus'}-circle text-lg ${isIncome ? 'text-teal-500' : 'text-red-500'}"></i>
+                        <i class="fas fa-wallet text-lg text-yellow-500"></i>
                         <div class="flex-grow">
                             <p class="font-semibold text-slate-800">${t.detail}</p>
-                            <p class="text-xs text-slate-500">${t.category === 'IN' ? 'Pemasukan' : 'Pengeluaran'}</p>
+                            <p class="text-xs text-slate-500">${t.category}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="font-bold ${isIncome ? 'text-teal-600' : 'text-red-600'} text-sm">${formatCurrency(t.amount)}</span>
+                        <span class="font-bold text-red-600 text-sm">${formatCurrency(t.amount)}</span>
                         <button data-id="${t.id}" class="edit-btn text-sky-500 hover:text-sky-700 mr-2"><i class="fas fa-edit"></i></button>
                         <button data-id="${t.id}" class="delete-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
                     </div>
@@ -574,13 +576,11 @@ document.addEventListener('DOMContentLoaded', () => {
             inExContainer.appendChild(dailyCard);
         });
 
-        // Update pagination controls for IN/EX
         inExPageInfo.textContent = `Halaman ${inExCurrentPage} dari ${inExTotalPages || 1}`;
         inExPrevPageBtn.disabled = inExCurrentPage === 1;
         inExNextPageBtn.disabled = inExCurrentPage === inExTotalPages || inExTotalPages === 0;
     };
 
-    // Event listeners for IN/EX pagination buttons
     inExPrevPageBtn.addEventListener('click', () => {
         if (inExCurrentPage > 1) {
             inExCurrentPage--;
@@ -607,7 +607,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // The rest of the IN/EX logic remains the same
     const openAddInExModal = () => {
         inExToEditIndex = null;
         inExForm.reset();
@@ -633,12 +632,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inExToEditIndex !== null && inExToEditIndex > -1) {
             inExTransactions[inExToEditIndex] = { ...inExTransactions[inExToEditIndex], ...inExData };
         } else {
-            inExTransactions.unshift({ ...inExData, id: Date.now() });
+            // Pengeluaran pada Uang Tayong selalu dicatat sebagai negatif
+            inExTransactions.unshift({ ...inExData, amount: -inExData.amount, id: Date.now() });
         }
         saveDataToFirestore();
         closeInExModal();
     });
-    // Event listener for edit/delete buttons on the new card view
+
     inExContent.addEventListener('click', (e) => {
         const editButton = e.target.closest('.edit-btn');
         if (editButton) return openEditInExModal(editButton.dataset.id);
@@ -654,12 +654,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     inExSearch.addEventListener('input', e => {
         inExFilterText = e.target.value;
-        inExCurrentPage = 1; // Reset to first page on new search
+        inExCurrentPage = 1;
         renderInExTransactions();
     });
-    inExDateFilter.addEventListener('change', e => { // New event listener for IN/EX date filter
+    inExDateFilter.addEventListener('change', e => {
         inExFilterDate = e.target.value;
-        inExCurrentPage = 1; // Reset to first page on new date filter
+        inExCurrentPage = 1;
         renderInExTransactions();
     });
     openInExModalBtn.addEventListener('click', openAddInExModal);
@@ -668,14 +668,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LOGIKA BARU UNTUK BUDGET ---
     const renderBudgetInputs = () => {
-        // Hapus input yang sudah ada
         budgetInputsContainer.innerHTML = '';
-        categories.forEach(category => {
-            const budgetValue = budgets[category] || 0; // Ambil nilai anggaran yang sudah ada
+        inExCategories.forEach(category => {
+            const budgetValue = budgets[category] || 0;
             const inputGroup = document.createElement('div');
             inputGroup.className = 'mb-4';
             inputGroup.innerHTML = `
-                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category}</label>
+                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category} (Anggaran)</label>
                 <input type="number" id="budget-${category}" name="budget-${category}" placeholder="Contoh: 1000000" min="0" value="${budgetValue}"
                        class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
             `;
@@ -687,12 +686,12 @@ document.addEventListener('DOMContentLoaded', () => {
     budgetForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const newBudgets = {};
-        categories.forEach(category => {
+        inExCategories.forEach(category => {
             const input = document.getElementById(`budget-${category}`);
             const amount = parseFloat(input.value) || 0;
             newBudgets[category] = amount;
         });
-        budgets = newBudgets; // Perbarui state anggaran
+        budgets = { ...budgets, ...newBudgets }; // Perbarui state anggaran
         saveDataToFirestore(); // Simpan ke Firestore
         openConfirmationModal({
             title: 'Anggaran Tersimpan',
@@ -706,14 +705,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATS LOGIC ---
     const renderDashboardStats = () => {
         const ctx = document.getElementById('dashboardChart').getContext('2d');
-        const categoryTotals = categories.map(category => {
+        const categoryTotals = dashboardCategories.map(category => {
             return {
                 category: category,
                 total: transactions
                     .filter(t => t.category === category)
                     .reduce((sum, t) => sum + t.amount, 0)
             };
-        }).filter(item => item.total > 0); // Hanya tampilkan kategori dengan pengeluaran
+        }).filter(item => item.total > 0);
 
         if (dashboardChartInstance) {
             dashboardChartInstance.destroy();
@@ -730,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
                         'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
                         'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)',
-                        'rgba(255, 235, 59, 0.8)' // Warna baru untuk "Jajan di luar"
+                        'rgba(255, 235, 59, 0.8)'
                     ],
                     borderColor: '#fff',
                     borderWidth: 2
@@ -761,8 +760,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderInExStats = () => {
         const ctx = document.getElementById('inExChart').getContext('2d');
-        const totalIn = inExTransactions.filter(t => t.category === 'IN').reduce((sum, t) => sum + t.amount, 0);
-        const totalEx = inExTransactions.filter(t => t.category === 'EX').reduce((sum, t) => sum + t.amount, 0);
+        const categoryTotals = inExCategories.map(category => {
+            return {
+                category: category,
+                total: inExTransactions
+                    .filter(t => t.category === category)
+                    .reduce((sum, t) => sum + t.amount, 0)
+            };
+        }).filter(item => item.total > 0);
 
         if (inExChartInstance) {
             inExChartInstance.destroy();
@@ -771,11 +776,14 @@ document.addEventListener('DOMContentLoaded', () => {
         inExChartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Pemasukan (IN)', 'Pengeluaran (EX)'],
+                labels: categoryTotals.map(item => item.category),
                 datasets: [{
-                    label: 'Pemasukan vs Pengeluaran',
-                    data: [totalIn, totalEx],
-                    backgroundColor: ['rgba(75, 192, 192, 0.8)', 'rgba(255, 99, 132, 0.8)'],
+                    label: 'Pengeluaran per Kategori',
+                    data: categoryTotals.map(item => item.total),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)'
+                    ],
                     borderColor: '#fff',
                     borderWidth: 2
                 }]
@@ -816,7 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
             openConfirmationModal({ title: 'Info', message: 'Tidak ada data untuk diunduh.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
             return;
         }
-        const allData = { transactions, inExTransactions, budgets }; // Sertakan data anggaran
+        const allData = { transactions, inExTransactions, budgets };
         const dataStr = JSON.stringify(allData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -842,7 +850,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     action: () => {
                         transactions = data.transactions || [];
                         inExTransactions = data.inExTransactions || [];
-                        budgets = data.budgets || {}; // Muat data anggaran
+                        budgets = data.budgets || {};
                         saveDataToFirestore();
                         openConfirmationModal({ title: 'Sukses', message: 'Data lokal berhasil dimuat dan akan disinkronkan.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
                     }
@@ -855,7 +863,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- FITUR BACK-TO-TOP ---
-    // Logika untuk menampilkan/menyembunyikan tombol
     window.addEventListener('scroll', () => {
         if (window.scrollY > 200) {
             backToTopBtn.classList.add('show');
@@ -864,7 +871,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Logika untuk menggulir ke atas saat tombol diklik
     backToTopBtn.addEventListener('click', () => {
         window.scrollTo({
             top: 0,
@@ -876,12 +882,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const stickyTabs = document.getElementById('sticky-tabs');
     const headerElement = document.querySelector('header');
     
-    // Perbarui: Gunakan Intersection Observer API untuk deteksi sticky yang lebih efisien
     const observer = new IntersectionObserver( 
         ([e]) => stickyTabs.classList.toggle('scrolled', e.intersectionRatio < 1), 
         { threshold: [1] }
     );
     
-    // Mulai amati elemen header, saat header tidak lagi terlihat, tab akan menjadi sticky
     observer.observe(headerElement);
 });
