@@ -263,9 +263,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderSummary = () => {
         summarySection.innerHTML = '';
         
+        // Kategori yang akan ditampilkan di ringkasan
         const summaryCategories = ['Bulanan', 'Mingguan', 'Mumih', 'Jajan di luar', 'Dana Cadangan'];
 
-        // Add the Total Pengeluaran card first
+        // Tambahkan kartu Total Pengeluaran terlebih dahulu
         const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
         const totalExpensesCard = document.createElement('div');
         totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
@@ -274,29 +275,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         summaryCategories.forEach(category => {
             let total = 0;
+            const card = document.createElement('div');
+            card.className = 'summary-card';
+            
+            // Logika baru untuk kartu Dana Cadangan
             if (category === 'Dana Cadangan') {
                 const savedTotal = transactions.filter(t => t.category === 'Saved').reduce((sum, t) => sum + t.amount, 0);
                 const daruratTotal = transactions.filter(t => t.category === 'Darurat').reduce((sum, t) => sum + t.amount, 0);
                 total = savedTotal + daruratTotal;
+                
+                // Ubah konten kartu untuk menunjukkan saldo rinci
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-500">${category}</h3>
+                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                    <div class="border-t border-dashed mt-2 pt-2">
+                        <p class="text-xs font-semibold text-slate-500">Saldo Saved: ${formatCurrency(savedTotal)}</p>
+                        <p class="text-xs font-semibold text-slate-500">Saldo Darurat: ${formatCurrency(daruratTotal)}</p>
+                    </div>
+                `;
             } else {
+                // Logika lama untuk kategori lainnya (dengan anggaran dan sisa)
                 total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+                const budget = budgets[category] || 0;
+                const remaining = budget - total;
+                const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-500">${category}</h3>
+                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                    <div class="border-t border-dashed mt-2 pt-2">
+                        <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                        <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                    </div>
+                `;
             }
-            
-            const card = document.createElement('div');
-            card.className = 'summary-card';
-            
-            // For general categories, show budget info
-            const budget = budgets[category] || 0;
-            const remaining = budget - total;
-            const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
-            card.innerHTML = `
-                <h3 class="font-semibold text-slate-500">${category}</h3>
-                <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
-                <div class="border-t border-dashed mt-2 pt-2">
-                    <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
-                    <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
-                </div>
-            `;
             summarySection.appendChild(card);
         });
     };
@@ -596,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lowercasedFilter = inExFilterText.toLowerCase();
         const filteredInExTransactions = inExTransactions.filter(t =>
             (t.detail.toLowerCase().includes(lowercasedFilter) ||
-            t.category.toLowerCase().includes(lowercasedFilter)) &&
+            t.category.toLowerCase().includes(lowcasedFilter)) &&
             (inExFilterDate === '' || t.date === inExFilterDate)
         );
         const groupedByDate = filteredInExTransactions.reduce((acc, t) => {
