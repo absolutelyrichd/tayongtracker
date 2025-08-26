@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabDashboard = document.getElementById('tabDashboard');
     const tabInEx = document.getElementById('tabInEx');
     const tabStats = document.getElementById('tabStats');
+    const tabBudget = document.getElementById('tabBudget');
     const tabBackup = document.getElementById('tabBackup');
     const dashboardContent = document.getElementById('dashboardContent');
     const inExContent = document.getElementById('inExContent');
@@ -240,7 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'Saved': 'bg-gray-100 text-gray-800',
         'Mumih': 'bg-blue-100 text-blue-800',
         'Darurat': 'bg-purple-100 text-purple-800',
-        'Jajan di luar': 'bg-yellow-100 text-yellow-800'
+        'Jajan di luar': 'bg-yellow-100 text-yellow-800',
+        'Dana Cadangan': 'bg-indigo-100 text-indigo-800' // New color for combined card
     };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
@@ -261,6 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderSummary = () => {
         summarySection.innerHTML = '';
         
+        const summaryCategories = ['Bulanan', 'Mingguan', 'Mumih', 'Jajan di luar', 'Dana Cadangan'];
+
         // Add the Total Pengeluaran card first
         const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
         const totalExpensesCard = document.createElement('div');
@@ -268,31 +272,31 @@ document.addEventListener('DOMContentLoaded', () => {
         totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">${formatCurrency(totalExpenses)}</p>`;
         summarySection.appendChild(totalExpensesCard);
 
-        dashboardCategories.forEach(category => {
-            const total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+        summaryCategories.forEach(category => {
+            let total = 0;
+            if (category === 'Dana Cadangan') {
+                const savedTotal = transactions.filter(t => t.category === 'Saved').reduce((sum, t) => sum + t.amount, 0);
+                const daruratTotal = transactions.filter(t => t.category === 'Darurat').reduce((sum, t) => sum + t.amount, 0);
+                total = savedTotal + daruratTotal;
+            } else {
+                total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+            }
             
             const card = document.createElement('div');
             card.className = 'summary-card';
             
-            if (['Saved', 'Darurat'].includes(category)) {
-                // Untuk Saved dan Darurat, jangan pakai anggaran
-                card.innerHTML = `
-                    <h3 class="font-semibold text-slate-500">${category}</h3>
-                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
-                `;
-            } else {
-                const budget = budgets[category] || 0;
-                const remaining = budget - total;
-                const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
-                card.innerHTML = `
-                    <h3 class="font-semibold text-slate-500">${category}</h3>
-                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
-                    <div class="border-t border-dashed mt-2 pt-2">
-                        <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
-                        <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
-                    </div>
-                `;
-            }
+            // For general categories, show budget info
+            const budget = budgets[category] || 0;
+            const remaining = budget - total;
+            const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+            card.innerHTML = `
+                <h3 class="font-semibold text-slate-500">${category}</h3>
+                <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                <div class="border-t border-dashed mt-2 pt-2">
+                    <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                    <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                </div>
+            `;
             summarySection.appendChild(card);
         });
     };
@@ -669,7 +673,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LOGIKA BARU UNTUK BUDGET ---
     const renderBudgetInputs = () => {
         budgetInputsContainer.innerHTML = '';
-        inExCategories.forEach(category => {
+        const allCategories = [...new Set([...dashboardCategories, ...inExCategories])];
+        allCategories.forEach(category => {
             const budgetValue = budgets[category] || 0;
             const inputGroup = document.createElement('div');
             inputGroup.className = 'mb-4';
@@ -686,7 +691,8 @@ document.addEventListener('DOMContentLoaded', () => {
     budgetForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const newBudgets = {};
-        inExCategories.forEach(category => {
+        const allCategories = [...new Set([...dashboardCategories, ...inExCategories])];
+        allCategories.forEach(category => {
             const input = document.getElementById(`budget-${category}`);
             const amount = parseFloat(input.value) || 0;
             newBudgets[category] = amount;
@@ -705,13 +711,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATS LOGIC ---
     const renderDashboardStats = () => {
         const ctx = document.getElementById('dashboardChart').getContext('2d');
-        const categoryTotals = dashboardCategories.map(category => {
-            return {
-                category: category,
-                total: transactions
-                    .filter(t => t.category === category)
-                    .reduce((sum, t) => sum + t.amount, 0)
-            };
+        const categoriesToShow = dashboardCategories.filter(c => c !== 'Saved' && c !== 'Darurat');
+        categoriesToShow.push('Dana Cadangan');
+        
+        const categoryTotals = categoriesToShow.map(category => {
+            let total = 0;
+            if (category === 'Dana Cadangan') {
+                total = transactions.filter(t => t.category === 'Saved' || t.category === 'Darurat').reduce((sum, t) => sum + t.amount, 0);
+            } else {
+                total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+            }
+            return { category: category, total: total };
         }).filter(item => item.total > 0);
 
         if (dashboardChartInstance) {
@@ -729,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
                         'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
                         'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)',
-                        'rgba(255, 235, 59, 0.8)'
+                        'rgba(255, 235, 59, 0.8)', 'rgba(128, 0, 128, 0.8)'
                     ],
                     borderColor: '#fff',
                     borderWidth: 2
