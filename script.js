@@ -69,14 +69,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const inExNextPageBtn = document.getElementById('inExNextPageBtn');
     const inExPageInfo = document.getElementById('inExPageInfo');
     const backToTopBtn = document.getElementById('backToTopBtn');
-    
+
     // Elemen untuk Anggaran
+
     const budgetContent = document.getElementById('budgetContent');
     const budgetForm = document.getElementById('budgetForm');
     const budgetInputsContainer = document.getElementById('budgetInputsContainer');
-    
-    // Elemen untuk Cutoff (BARU)
-    const cutoffBtn = document.getElementById('cutoffBtn');
 
     // --- AUTHENTICATION ---
     loginBtn.addEventListener('click', () => {
@@ -834,30 +832,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- BACKUP MANAGEMENT LOGIC ---
     const downloadAllBtn = document.getElementById('downloadAllBtn');
     const uploadAllInput = document.getElementById('uploadAllInput');
-    
-    // Logika Cutoff (BARU)
-    cutoffBtn.addEventListener('click', () => {
-        openConfirmationModal({
-            title: 'Konfirmasi Cutoff Bulanan',
-            message: 'Ini akan menghapus semua data transaksi Anda (Pengeluaran Umum dan Uang Tayong). Anggaran Anda akan dipertahankan. Apakah Anda yakin?',
-            confirmText: 'Ya, Lakukan Cutoff',
-            confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors',
-            action: () => {
-                // Reset transaksi
-                transactions = [];
-                inExTransactions = [];
-                saveDataToFirestore();
-                openConfirmationModal({
-                    title: 'Cutoff Berhasil',
-                    message: 'Data transaksi berhasil dihapus dan siklus baru dimulai. Anggaran Anda tetap utuh.',
-                    confirmText: 'OK',
-                    confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
-                    action: () => {}
-                });
-            }
-        });
-    });
-
     downloadAllBtn.addEventListener('click', () => {
         if (transactions.length === 0 && inExTransactions.length === 0) {
             openConfirmationModal({ title: 'Info', message: 'Tidak ada data untuk diunduh.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
