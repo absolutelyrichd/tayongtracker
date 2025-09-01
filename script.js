@@ -51,6 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
         inputElement.value = new Date().toISOString().slice(0, 10);
     };
 
+    // --- FUNGSI BARU UNTUK MENDAPATKAN BULAN BERJALAN ---
+    const getCurrentMonthAndYear = () => {
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        return `${year}-${month}`;
+    };
+
     // --- DOM ELEMENTS ---
     const authContainer = document.getElementById('authContainer');
     const loginPrompt = document.getElementById('loginPrompt');
@@ -263,11 +271,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderSummary = () => {
         summarySection.innerHTML = '';
         
+        // Filter transaksi untuk bulan berjalan
+        const currentMonthAndYear = getCurrentMonthAndYear();
+        const currentMonthTransactions = transactions.filter(t => t.date.startsWith(currentMonthAndYear));
+
         // Kategori yang akan ditampilkan di ringkasan
         const summaryCategories = ['Bulanan', 'Mingguan', 'Mumih', 'Jajan di luar', 'Dana Cadangan'];
 
         // Tambahkan kartu Total Pengeluaran terlebih dahulu
-        const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
+        const totalExpenses = currentMonthTransactions.reduce((sum, t) => sum + t.amount, 0);
         const totalExpensesCard = document.createElement('div');
         totalExpensesCard.className = 'summary-card bg-red-50 border-l-4 border-red-500';
         totalExpensesCard.innerHTML = `<h3 class="font-semibold text-red-700">Total Pengeluaran</h3><p id="totalExpenses" class="text-xl font-bold mt-2 text-red-800">${formatCurrency(totalExpenses)}</p>`;
@@ -295,7 +307,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             } else {
                 // Logika lama untuk kategori lainnya (dengan anggaran dan sisa)
-                total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+                // Total hanya untuk bulan berjalan
+                total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
                 const budget = budgets[category] || 0;
                 const remaining = budget - total;
                 const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
@@ -717,12 +730,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const categoriesToShow = dashboardCategories.filter(c => c !== 'Saved' && c !== 'Darurat');
         categoriesToShow.push('Dana Cadangan');
         
+        // Filter transaksi untuk bulan berjalan
+        const currentMonthAndYear = getCurrentMonthAndYear();
+        const currentMonthTransactions = transactions.filter(t => t.date.startsWith(currentMonthAndYear));
+
         const categoryTotals = categoriesToShow.map(category => {
             let total = 0;
             if (category === 'Dana Cadangan') {
-                total = transactions.filter(t => t.category === 'Saved' || t.category === 'Darurat').reduce((sum, t) => sum + t.amount, 0);
+                total = currentMonthTransactions.filter(t => t.category === 'Saved' || t.category === 'Darurat').reduce((sum, t) => sum + t.amount, 0);
             } else {
-                total = transactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+                total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
             }
             return { category: category, total: total };
         }).filter(item => item.total > 0);
