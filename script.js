@@ -292,8 +292,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Logika baru untuk kartu Dana Cadangan
             if (category === 'Dana Cadangan') {
-                const savedTotal = transactions.filter(t => t.category === 'Saved').reduce((sum, t) => sum + t.amount, 0);
-                const daruratTotal = transactions.filter(t => t.category === 'Darurat').reduce((sum, t) => sum + t.amount, 0);
+                const savedTotal = currentMonthTransactions.filter(t => t.category === 'Saved').reduce((sum, t) => sum + t.amount, 0);
+                const daruratTotal = currentMonthTransactions.filter(t => t.category === 'Darurat').reduce((sum, t) => sum + t.amount, 0);
                 total = savedTotal + daruratTotal;
                 
                 // Ubah konten kartu untuk menunjukkan saldo rinci
