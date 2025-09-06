@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Kategori untuk tab "Umum"
     const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
-    const weeklyBudgetCategories = ['Mingguan'];
-    const monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
+    const weeklyBudgetCategories = ['Mingguan', 'Tayong harian'];
+    const monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel'];
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
 
     // Pagination state
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return t.category === category && txWeekKey === currentWeekKey;
             }).reduce((sum, t) => sum + t.amount, 0);
             
-            const budget = weeklyBudgets[currentWeekKey] || 0;
+            const budget = weeklyBudgets[category] ? weeklyBudgets[category][currentWeekKey] : 0;
             const remaining = budget - total;
             const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
             const card = document.createElement('div');
@@ -328,7 +328,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentMonthAndYear = getCurrentMonthAndYear();
         const currentMonthTransactions = transactions.filter(t => t.date.startsWith(currentMonthAndYear));
 
-        // Combine categories from dashboard and inEx for monthly budget view
         const allMonthlyCategories = monthlyBudgetCategories;
 
         allMonthlyCategories.forEach(category => {
@@ -565,9 +564,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentMonth = today.getMonth() + 1;
         
         for (let i = 1; i <= 4; i++) {
-            const weekKey = `${currentYear}-${currentMonth}-W${i}`;
             weeklyBudgetCategories.forEach(category => {
-                const budgetValue = weeklyBudgets[weekKey] || 0;
+                const weekKey = `${currentYear}-${currentMonth}-W${i}`;
+                const budgetValue = weeklyBudgets[category] ? weeklyBudgets[category][weekKey] : 0;
                 const inputGroup = document.createElement('div');
                 inputGroup.className = 'mb-4';
                 inputGroup.innerHTML = `
@@ -606,8 +605,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const input = document.getElementById(`budget-${category}-${weekKey}`);
                 if (input) {
                     const amount = parseFloat(input.value) || 0;
-                    // Bug fix: save the value regardless of whether it's > 0.
-                    newWeeklyBudgets[weekKey] = amount;
+                    if (!newWeeklyBudgets[category]) {
+                        newWeeklyBudgets[category] = {};
+                    }
+                    newWeeklyBudgets[category][weekKey] = amount;
                 }
             });
         }
@@ -627,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATS LOGIC ---
     const renderDashboardStats = () => {
         const ctx = document.getElementById('dashboardChart').getContext('2d');
-        const categoriesToShow = [...monthlyBudgetCategories, ...weeklyBudgetCategories];
+        const categoriesToShow = dashboardCategories;
         
         // Filter transaksi untuk bulan berjalan
         const currentMonthAndYear = getCurrentMonthAndYear();
@@ -683,46 +684,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const renderInExStats = () => {
-        // Since there are no more inEx categories, this chart is no longer needed.
-        // It's still here to avoid errors but will render an empty chart.
-        const ctx = document.getElementById('inExChart').getContext('2d');
-        if (inExChartInstance) {
-            inExChartInstance.destroy();
-        }
-        
-        inExChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: [],
-                datasets: []
-            },
-             options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed !== null) {
-                                    label += formatCurrency(context.parsed);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    };
-
     const renderAllStats = () => {
         renderDashboardStats();
-        renderInExStats();
     };
 
     // --- BACKUP MANAGEMENT LOGIC ---
