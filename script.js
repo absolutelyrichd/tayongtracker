@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- GLOBAL STATE & UTILITIES ---
     let transactions = [];
-    let budgets = {}; // State untuk menyimpan data anggaran bulanan
-    let weeklyBudgets = {}; // State untuk menyimpan anggaran mingguan
-    let dailyBudgets = {}; // State untuk menyimpan anggaran harian
+    let budgets = {}; // State untuk menyimpan data budget bulanan
+    let weeklyBudgets = {}; // State untuk menyimpan budget mingguan
+    let dailyBudgets = {}; // State untuk menyimpan budget harian
     let currentUser = null;
     let unsubscribe = null; // Untuk melepaskan listener Firestore
     let dashboardFilterText = '';
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageInfo = document.getElementById('pageInfo');
     const backToTopBtn = document.getElementById('backToTopBtn');
 
-    // Elemen untuk Anggaran
+    // Elemen untuk budget
     const weeklyBudgetSummarySection = document.getElementById('weeklyBudgetSummarySection');
     const monthlyBudgetSummarySection = document.getElementById('monthlyBudgetSummarySection');
     const budgetContent = document.getElementById('budgetContent');
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 class="font-semibold text-slate-500">${category}</h3>
                 <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
                 <div class="border-t border-dashed mt-2 pt-2">
-                    <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                    <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
                     <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
                 </div>
             `;
@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3 class="font-semibold text-slate-500">${category}</h3>
                     <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
                     <div class="border-t border-dashed mt-2 pt-2">
-                        <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                        <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
                         <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
                     </div>
                 `;
@@ -563,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const monthlyBudgetTitle = document.createElement('h3');
         monthlyBudgetTitle.className = 'text-lg font-bold mt-6 mb-2 text-slate-700';
-        monthlyBudgetTitle.textContent = 'Anggaran Bulanan';
+        monthlyBudgetTitle.textContent = 'Budget Bulanan';
         budgetInputsContainer.appendChild(monthlyBudgetTitle);
 
         monthlyBudgetCategories.forEach(category => {
@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const weeklyBudgetTitle = document.createElement('h3');
         weeklyBudgetTitle.className = 'text-lg font-bold mt-6 mb-2 text-slate-700';
-        weeklyBudgetTitle.textContent = 'Anggaran Mingguan';
+        weeklyBudgetTitle.textContent = 'Budget Mingguan';
         budgetInputsContainer.appendChild(weeklyBudgetTitle);
         
         weeklyBudgetCategories.forEach(category => {
@@ -615,14 +615,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    // Tangani pengiriman form anggaran
+    // Tangani pengiriman form budget
     budgetForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const newBudgets = {};
         const newWeeklyBudgets = {};
         const newDailyBudgets = {};
 
-        // Ambil data anggaran bulanan
+        // Ambil data budget bulanan
         monthlyBudgetCategories.forEach(category => {
             const input = document.getElementById(`budget-${category}`);
             if (input) {
@@ -631,7 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Ambil data anggaran mingguan & harian
+        // Ambil data budget mingguan & harian
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = today.getMonth() + 1;
@@ -659,13 +659,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        budgets = { ...budgets, ...newBudgets }; // Perbarui state anggaran bulanan
-        weeklyBudgets = { ...weeklyBudgets, ...newWeeklyBudgets }; // Perbarui state anggaran mingguan
-        dailyBudgets = { ...dailyBudgets, ...newDailyBudgets }; // Perbarui state anggaran harian
+        budgets = { ...budgets, ...newBudgets }; // Perbarui state budget bulanan
+        weeklyBudgets = { ...weeklyBudgets, ...newWeeklyBudgets }; // Perbarui state budget mingguan
+        dailyBudgets = { ...dailyBudgets, ...newDailyBudgets }; // Perbarui state budget harian
         saveDataToFirestore(); // Simpan ke Firestore
         openConfirmationModal({
-            title: 'Anggaran Tersimpan',
-            message: 'Anggaran Anda berhasil disimpan dan disinkronkan.',
+            title: 'Budget Tersimpan',
+            message: 'Budget Anda berhasil disimpan dan disinkronkan.',
             confirmText: 'OK',
             confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
             action: () => {}
