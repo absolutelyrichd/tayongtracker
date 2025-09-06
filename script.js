@@ -313,18 +313,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentDateKey = getCurrentDateKey();
         
         weeklyBudgetCategories.forEach(category => {
-            const total = transactions.filter(t => {
-                if (category === 'Tayong harian') {
-                    // Logika khusus untuk Tayong harian (per hari)
-                    return t.category === category && t.date === currentDateKey;
-                } else {
-                    // Logika untuk kategori mingguan lainnya
+            let total = 0;
+            if (category === 'Tayong harian') {
+                total = transactions.filter(t => t.category === category && t.date === currentDateKey).reduce((sum, t) => sum + t.amount, 0);
+            } else {
+                total = transactions.filter(t => {
                     const txDate = new Date(t.date);
                     const txWeekNumber = getWeekNumberInMonth(txDate);
                     const txWeekKey = `${txDate.getFullYear()}-${txDate.getMonth() + 1}-W${txWeekNumber}`;
                     return t.category === category && txWeekKey === currentWeekKey;
-                }
-            }).reduce((sum, t) => sum + t.amount, 0);
+                }).reduce((sum, t) => sum + t.amount, 0);
+            }
             
             let budget = 0;
             if (category === 'Tayong harian') {
