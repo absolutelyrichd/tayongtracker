@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GLOBAL STATE & UTILITIES ---
     let transactions = [];
     let inExTransactions = [];
-    let budgets = {}; // State untuk menyimpan data anggaran
+    let budgets = {}; // State untuk menyimpan data anggaran bulanan
     let weeklyBudgets = {}; // State untuk menyimpan anggaran mingguan
     let currentUser = null;
     let unsubscribe = null; // Untuk melepaskan listener Firestore
@@ -787,20 +787,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Input Anggaran Mingguan akan dipisahkan berdasarkan minggu
         const today = new Date();
         const currentYear = today.getFullYear();
-        const currentWeekNumber = getWeekNumber(today);
         
-        weeklyBudgetCategories.forEach(category => {
-            const weekKey = `${currentYear}-W${currentWeekNumber}`;
-            const budgetValue = weeklyBudgets[weekKey] || 0;
-            const inputGroup = document.createElement('div');
-            inputGroup.className = 'mb-4';
-            inputGroup.innerHTML = `
-                <label for="budget-${category}-${weekKey}" class="block text-sm font-medium text-slate-600">${category} (Minggu Ini)</label>
-                <input type="number" id="budget-${category}-${weekKey}" name="budget-${category}-${weekKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
-                       class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-            `;
-            budgetInputsContainer.appendChild(inputGroup);
-        });
+        for (let i = 1; i <= 4; i++) {
+            const weekKey = `${currentYear}-W${i}`;
+            weeklyBudgetCategories.forEach(category => {
+                const budgetValue = weeklyBudgets[weekKey] || 0;
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'mb-4';
+                inputGroup.innerHTML = `
+                    <label for="budget-${category}-${weekKey}" class="block text-sm font-medium text-slate-600">${category} (Minggu ke-${i})</label>
+                    <input type="number" id="budget-${category}-${weekKey}" name="budget-${category}-${weekKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
+                           class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                `;
+                budgetInputsContainer.appendChild(inputGroup);
+            });
+        }
     };
     
     // Tangani pengiriman form anggaran
@@ -821,17 +822,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ambil data anggaran mingguan
         const today = new Date();
         const currentYear = today.getFullYear();
-        const currentWeekNumber = getWeekNumber(today);
-        const weekKey = `${currentYear}-W${currentWeekNumber}`;
 
-        weeklyBudgetCategories.forEach(category => {
-            const input = document.getElementById(`budget-${category}-${weekKey}`);
-            if (input) {
-                const amount = parseFloat(input.value) || 0;
-                newWeeklyBudgets[weekKey] = amount;
-            }
-        });
-
+        for (let i = 1; i <= 4; i++) {
+            const weekKey = `${currentYear}-W${i}`;
+            weeklyBudgetCategories.forEach(category => {
+                const input = document.getElementById(`budget-${category}-${weekKey}`);
+                if (input) {
+                    const amount = parseFloat(input.value) || 0;
+                    if (amount > 0) {
+                        newWeeklyBudgets[weekKey] = amount;
+                    }
+                }
+            });
+        }
+        
         budgets = { ...budgets, ...newBudgets }; // Perbarui state anggaran bulanan
         weeklyBudgets = { ...weeklyBudgets, ...newWeeklyBudgets }; // Perbarui state anggaran mingguan
         saveDataToFirestore(); // Simpan ke Firestore
