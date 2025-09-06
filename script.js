@@ -315,10 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
         weeklyBudgetCategories.forEach(category => {
             let total = 0;
             if (category === 'Tayong harian') {
-                // Logika khusus untuk Tayong harian (per hari)
                 total = transactions.filter(t => t.category === category && t.date === currentDateKey).reduce((sum, t) => sum + t.amount, 0);
             } else {
-                // Logika untuk kategori mingguan lainnya
                 total = transactions.filter(t => {
                     const txDate = new Date(t.date);
                     const txWeekNumber = getWeekNumberInMonth(txDate);
@@ -338,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
             const card = document.createElement('div');
             card.className = 'summary-card';
+            card.setAttribute('draggable', 'true');
             card.innerHTML = `
                 <h3 class="font-semibold text-slate-500">${category}</h3>
                 <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
@@ -348,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             weeklyBudgetSummarySection.appendChild(card);
         });
+        addDragAndDropEventListeners(weeklyBudgetSummarySection);
     };
 
     const renderMonthlyBudgetSummary = () => {
@@ -360,6 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let total = 0;
             const card = document.createElement('div');
             card.className = 'summary-card';
+            card.setAttribute('draggable', 'true');
             
             if (category === 'Dana Cadangan') {
                 const savedTotal = currentMonthTransactions.filter(t => t.category === 'Saved').reduce((sum, t) => sum + t.amount, 0);
@@ -399,7 +400,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             monthlyBudgetSummarySection.appendChild(card);
         });
+        addDragAndDropEventListeners(monthlyBudgetSummarySection);
     };
+    
+    // Fungsi untuk menambah event listener drag-and-drop
+    function addDragAndDropEventListeners(container) {
+        let draggedItem = null;
+
+        container.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('summary-card')) {
+                draggedItem = e.target;
+                setTimeout(() => {
+                    draggedItem.classList.add('dragging');
+                }, 0);
+            }
+        });
+
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(container, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (afterElement == null) {
+                container.appendChild(draggable);
+            } else {
+                container.insertBefore(draggable, afterElement);
+            }
+        });
+
+        container.addEventListener('dragend', () => {
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+        });
+
+        const getDragAfterElement = (container, y) => {
+            const draggableElements = [...container.querySelectorAll('.summary-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        };
+    }
 
     const renderTransactions = () => {
         const lowercasedFilter = dashboardFilterText.toLowerCase();
