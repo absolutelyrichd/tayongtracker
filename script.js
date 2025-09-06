@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let transactions = [];
     let inExTransactions = [];
     let budgets = {}; // State untuk menyimpan data anggaran
+    let weeklyBudgets = {}; // State untuk menyimpan anggaran mingguan
     let currentUser = null;
     let unsubscribe = null; // Untuk melepaskan listener Firestore
     let dashboardFilterText = '';
@@ -35,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inExCategories = ['Harian', 'Weekend', 'Fleksibel'];
     const weeklyBudgetCategories = ['Mingguan'];
     const monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong'];
+    const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories, ...inExCategories])];
 
     // Pagination state
     let currentPage = 1;
@@ -59,6 +61,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         return `${year}-${month}`;
+    };
+
+    // --- FUNGSI UNTUK MENDAPATKAN NOMOR MINGGU BERDASARKAN TANGGAL ---
+    const getWeekNumber = (d) => {
+        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+        const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+        return weekNo;
     };
 
     // --- DOM ELEMENTS ---
@@ -115,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             transactions = [];
             inExTransactions = [];
             budgets = {};
+            weeklyBudgets = {};
             renderAll();
             loginPrompt.classList.remove('hidden');
             mainContent.classList.add('hidden');
@@ -132,10 +144,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 transactions = data.transactions || [];
                 inExTransactions = data.inExTransactions || [];
                 budgets = data.budgets || {};
+                weeklyBudgets = data.weeklyBudgets || {};
             } else {
                 transactions = [];
                 inExTransactions = [];
                 budgets = {};
+                weeklyBudgets = {};
             }
             currentPage = 1; 
             dashboardFilterDate = '';
@@ -149,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return;
         try {
             const docRef = db.collection('users').doc(currentUser.uid);
-            await docRef.set({ transactions, inExTransactions, budgets });
+            await docRef.set({ transactions, inExTransactions, budgets, weeklyBudgets });
         } catch (error) {
             console.error("Error saving data:", error);
         }
@@ -308,11 +322,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderWeeklyBudgetSummary = () => {
         weeklyBudgetSummarySection.innerHTML = '';
-        const currentMonthTransactions = transactions.filter(t => t.date.startsWith(getCurrentMonthAndYear()));
+        const today = new Date();
+        const currentWeekKey = `${today.getFullYear()}-W${getWeekNumber(today)}`;
         
         weeklyBudgetCategories.forEach(category => {
-            const total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
-            const budget = budgets[category] || 0;
+            const total = transactions.filter(t => {
+                const txDate = new Date(t.date);
+                return t.category === category && `${txDate.getFullYear()}-W${getWeekNumber(txDate)}` === currentWeekKey;
+            }).reduce((sum, t) => sum + t.amount, 0);
+            
+            const budget = weeklyBudgets[currentWeekKey] || 0;
             const remaining = budget - total;
             const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
             const card = document.createElement('div');
@@ -331,7 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderMonthlyBudgetSummary = () => {
         monthlyBudgetSummarySection.innerHTML = '';
-        const currentMonthTransactions = transactions.filter(t => t.date.startsWith(getCurrentMonthAndYear()));
+        const currentMonthAndYear = getCurrentMonthAndYear();
+        const currentMonthTransactions = transactions.filter(t => t.date.startsWith(currentMonthAndYear));
 
         // Combine categories from dashboard and inEx for monthly budget view
         const allMonthlyCategories = [...monthlyBudgetCategories, ...inExCategories];
@@ -741,15 +761,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LOGIKA BARU UNTUK BUDGET ---
     const renderBudgetInputs = () => {
         budgetInputsContainer.innerHTML = '';
-        const monthlyCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong', ...inExCategories];
-        const weeklyCategories = ['Mingguan'];
         
         const monthlyBudgetTitle = document.createElement('h3');
         monthlyBudgetTitle.className = 'text-lg font-bold mt-6 mb-2 text-slate-700';
         monthlyBudgetTitle.textContent = 'Anggaran Bulanan';
         budgetInputsContainer.appendChild(monthlyBudgetTitle);
 
-        monthlyCategories.forEach(category => {
+        monthlyBudgetCategories.forEach(category => {
             const budgetValue = budgets[category] || 0;
             const inputGroup = document.createElement('div');
             inputGroup.className = 'mb-4';
@@ -766,13 +784,19 @@ document.addEventListener('DOMContentLoaded', () => {
         weeklyBudgetTitle.textContent = 'Anggaran Mingguan';
         budgetInputsContainer.appendChild(weeklyBudgetTitle);
         
-        weeklyCategories.forEach(category => {
-            const budgetValue = budgets[category] || 0;
+        // Input Anggaran Mingguan akan dipisahkan berdasarkan minggu
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentWeekNumber = getWeekNumber(today);
+        
+        weeklyBudgetCategories.forEach(category => {
+            const weekKey = `${currentYear}-W${currentWeekNumber}`;
+            const budgetValue = weeklyBudgets[weekKey] || 0;
             const inputGroup = document.createElement('div');
             inputGroup.className = 'mb-4';
             inputGroup.innerHTML = `
-                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category}</label>
-                <input type="number" id="budget-${category}" name="budget-${category}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
+                <label for="budget-${category}-${weekKey}" class="block text-sm font-medium text-slate-600">${category} (Minggu Ini)</label>
+                <input type="number" id="budget-${category}-${weekKey}" name="budget-${category}-${weekKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
                        class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
             `;
             budgetInputsContainer.appendChild(inputGroup);
@@ -783,15 +807,33 @@ document.addEventListener('DOMContentLoaded', () => {
     budgetForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const newBudgets = {};
-        const allCategories = [...new Set([...dashboardCategories, ...inExCategories])];
-        allCategories.forEach(category => {
+        const newWeeklyBudgets = {};
+
+        // Ambil data anggaran bulanan
+        monthlyBudgetCategories.forEach(category => {
             const input = document.getElementById(`budget-${category}`);
             if (input) {
                 const amount = parseFloat(input.value) || 0;
                 newBudgets[category] = amount;
             }
         });
-        budgets = { ...budgets, ...newBudgets }; // Perbarui state anggaran
+
+        // Ambil data anggaran mingguan
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentWeekNumber = getWeekNumber(today);
+        const weekKey = `${currentYear}-W${currentWeekNumber}`;
+
+        weeklyBudgetCategories.forEach(category => {
+            const input = document.getElementById(`budget-${category}-${weekKey}`);
+            if (input) {
+                const amount = parseFloat(input.value) || 0;
+                newWeeklyBudgets[weekKey] = amount;
+            }
+        });
+
+        budgets = { ...budgets, ...newBudgets }; // Perbarui state anggaran bulanan
+        weeklyBudgets = { ...weeklyBudgets, ...newWeeklyBudgets }; // Perbarui state anggaran mingguan
         saveDataToFirestore(); // Simpan ke Firestore
         openConfirmationModal({
             title: 'Anggaran Tersimpan',
@@ -930,7 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
             openConfirmationModal({ title: 'Info', message: 'Tidak ada data untuk diunduh.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
             return;
         }
-        const allData = { transactions, inExTransactions, budgets };
+        const allData = { transactions, inExTransactions, budgets, weeklyBudgets };
         const dataStr = JSON.stringify(allData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -957,6 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         transactions = data.transactions || [];
                         inExTransactions = data.inExTransactions || [];
                         budgets = data.budgets || {};
+                        weeklyBudgets = data.weeklyBudgets || {};
                         saveDataToFirestore();
                         openConfirmationModal({ title: 'Sukses', message: 'Data lokal berhasil dimuat dan akan disinkronkan.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
                     }
