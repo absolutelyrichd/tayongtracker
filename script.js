@@ -30,8 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Kategori untuk tab "Umum"
     const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
     const dailyBudgetCategories = ['Tayong harian'];
-    const weeklyBudgetCategories = ['Mingguan', ...dailyBudgetCategories];
-    const monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel', 'Tayong harian'];
+    let weeklyBudgetCategories = ['Mingguan', ...dailyBudgetCategories]; // Make this `let`
+    let monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel', 'Tayong harian']; // Make this `let`
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
 
     // Pagination state
@@ -142,6 +142,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 budgets = data.budgets || {};
                 weeklyBudgets = data.weeklyBudgets || {};
                 dailyBudgets = data.dailyBudgets || {};
+                // Load saved card order
+                if (data.monthlyBudgetCategoriesOrder) {
+                    monthlyBudgetCategories = data.monthlyBudgetCategoriesOrder;
+                }
+                if (data.weeklyBudgetCategoriesOrder) {
+                    weeklyBudgetCategories = data.weeklyBudgetCategoriesOrder;
+                }
             } else {
                 transactions = [];
                 budgets = {};
@@ -158,7 +165,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return;
         try {
             const docRef = db.collection('users').doc(currentUser.uid);
-            await docRef.set({ transactions, budgets, weeklyBudgets, dailyBudgets });
+            await docRef.set({ 
+                transactions, 
+                budgets, 
+                weeklyBudgets, 
+                dailyBudgets,
+                monthlyBudgetCategoriesOrder: monthlyBudgetCategories,
+                weeklyBudgetCategoriesOrder: weeklyBudgetCategories
+            }, { merge: true });
         } catch (error) {
             console.error("Error saving data:", error);
         }
@@ -337,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'summary-card';
             card.setAttribute('draggable', 'true');
+            card.dataset.category = category; // Add a data attribute for drag and drop
             card.innerHTML = `
                 <h3 class="font-semibold text-slate-500">${category}</h3>
                 <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
@@ -347,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             weeklyBudgetSummarySection.appendChild(card);
         });
-        addDragAndDropEventListeners(weeklyBudgetSummarySection);
+        addDragAndDropEventListeners(weeklyBudgetSummarySection, 'weekly');
     };
 
     const renderMonthlyBudgetSummary = () => {
@@ -361,6 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'summary-card';
             card.setAttribute('draggable', 'true');
+            card.dataset.category = category; // Add a data attribute for drag and drop
             
             if (category === 'Dana Cadangan') {
                 const savedTotal = currentMonthTransactions.filter(t => t.category === 'Saved').reduce((sum, t) => sum + t.amount, 0);
@@ -400,11 +416,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             monthlyBudgetSummarySection.appendChild(card);
         });
-        addDragAndDropEventListeners(monthlyBudgetSummarySection);
+        addDragAndDropEventListeners(monthlyBudgetSummarySection, 'monthly');
     };
     
     // Fungsi untuk menambah event listener drag-and-drop
-    function addDragAndDropEventListeners(container) {
+    function addDragAndDropEventListeners(container, type) {
         let draggedItem = null;
 
         container.addEventListener('dragstart', (e) => {
@@ -430,6 +446,14 @@ document.addEventListener('DOMContentLoaded', () => {
         container.addEventListener('dragend', () => {
             draggedItem.classList.remove('dragging');
             draggedItem = null;
+            // Get the new order of categories and save it to Firestore
+            const newOrder = Array.from(container.children).map(child => child.dataset.category);
+            if (type === 'monthly') {
+                monthlyBudgetCategories = newOrder;
+            } else if (type === 'weekly') {
+                weeklyBudgetCategories = newOrder;
+            }
+            saveDataToFirestore();
         });
 
         const getDragAfterElement = (container, y) => {
@@ -797,7 +821,14 @@ document.addEventListener('DOMContentLoaded', () => {
             openConfirmationModal({ title: 'Info', message: 'Tidak ada data untuk diunduh.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
             return;
         }
-        const allData = { transactions, budgets, weeklyBudgets, dailyBudgets };
+        const allData = { 
+            transactions, 
+            budgets, 
+            weeklyBudgets, 
+            dailyBudgets, 
+            monthlyBudgetCategoriesOrder: monthlyBudgetCategories,
+            weeklyBudgetCategoriesOrder: weeklyBudgetCategories
+        };
         const dataStr = JSON.stringify(allData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -825,6 +856,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         budgets = data.budgets || {};
                         weeklyBudgets = data.weeklyBudgets || {};
                         dailyBudgets = data.dailyBudgets || {};
+                        if (data.monthlyBudgetCategoriesOrder) {
+                            monthlyBudgetCategories = data.monthlyBudgetCategoriesOrder;
+                        }
+                        if (data.weeklyBudgetCategoriesOrder) {
+                            weeklyBudgetCategories = data.weeklyBudgetCategoriesOrder;
+                        }
                         saveDataToFirestore();
                         openConfirmationModal({ title: 'Sukses', message: 'Data lokal berhasil dimuat dan akan disinkronkan.', confirmText: 'OK', confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', action: () => {} });
                     }
