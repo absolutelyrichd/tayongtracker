@@ -170,6 +170,19 @@
         #mainContent {
             padding-top: 3rem;
         }
+
+        /* Perbarui style Anggaran Mingguan dan Bulanan */
+        .summary-weekly, .summary-monthly {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Perbarui style for Input Anggaran */
+        .budget-input-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
         
     </style>
 </head>
@@ -203,9 +216,11 @@
             <div id="sticky-tabs" class="mb-6">
                 <nav class="flex flex-wrap justify-center" aria-label="Tabs">
                     <button id="tabDashboard" class="tab-btn active">Umum</button>
+                    <button id="tabWeeklyBudget" class="tab-btn">Anggaran Mingguan</button>
+                    <button id="tabMonthlyBudget" class="tab-btn">Anggaran Bulanan</button>
                     <button id="tabInEx" class="tab-btn">Uang Tayong</button>
+                    <button id="tabBudget" class="tab-btn">Input Anggaran</button>
                     <button id="tabStats" class="tab-btn">Statistik</button>
-                    <button id="tabBudget" class="tab-btn">Anggaran</button>
                     <button id="tabBackup" class="tab-btn">Manajemen Backup</button>
                 </nav>
             </div>
@@ -242,6 +257,20 @@
                     </div>
                 </div>
 
+                <!-- Anggaran Mingguan Content -->
+                <div id="weeklyBudgetContent" class="hidden">
+                    <section id="weeklyBudgetSummarySection" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 summary-weekly">
+                        <!-- Cards will be dynamically added here -->
+                    </section>
+                </div>
+
+                <!-- Anggaran Bulanan Content -->
+                <div id="monthlyBudgetContent" class="hidden">
+                     <section id="monthlyBudgetSummarySection" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 summary-monthly">
+                        <!-- Cards will be dynamically added here -->
+                    </section>
+                </div>
+                
                 <!-- IN/EX Tracker Content (Uang Tayong) -->
                 <div id="inExContent" class="hidden">
                     <section id="inExSummarySection" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">

@@ -30,9 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let inExChartInstance = null;
 
     // Kategori untuk tab "Umum"
-    const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar'];
+    const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong'];
     // Kategori baru untuk tab "Uang Tayong"
     const inExCategories = ['Harian', 'Weekend', 'Fleksibel'];
+    const weeklyBudgetCategories = ['Tayong'];
+    const monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar'];
+    const otherCategories = ['Saved'];
 
     // Pagination state
     let currentPage = 1;
@@ -79,7 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToTopBtn = document.getElementById('backToTopBtn');
 
     // Elemen untuk Anggaran
-
+    const weeklyBudgetSummarySection = document.getElementById('weeklyBudgetSummarySection');
+    const monthlyBudgetSummarySection = document.getElementById('monthlyBudgetSummarySection');
     const budgetContent = document.getElementById('budgetContent');
     const budgetForm = document.getElementById('budgetForm');
     const budgetInputsContainer = document.getElementById('budgetInputsContainer');
@@ -155,40 +159,53 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- RENDER ALL ---
     const renderAll = () => {
         renderSummary();
-        renderTransactions();
+        renderWeeklyBudgetSummary();
+        renderMonthlyBudgetSummary();
         renderInExSummary();
+        renderTransactions();
         renderInExTransactions();
         renderAllStats();
     }
 
     // --- TABS ---
     const tabDashboard = document.getElementById('tabDashboard');
+    const tabWeeklyBudget = document.getElementById('tabWeeklyBudget');
+    const tabMonthlyBudget = document.getElementById('tabMonthlyBudget');
     const tabInEx = document.getElementById('tabInEx');
-    const tabStats = document.getElementById('tabStats');
     const tabBudget = document.getElementById('tabBudget');
+    const tabStats = document.getElementById('tabStats');
     const tabBackup = document.getElementById('tabBackup');
     const dashboardContent = document.getElementById('dashboardContent');
+    const weeklyBudgetContent = document.getElementById('weeklyBudgetContent');
+    const monthlyBudgetContent = document.getElementById('monthlyBudgetContent');
     const inExContent = document.getElementById('inExContent');
     const statsContent = document.getElementById('statsContent');
+    const budgetContentEl = document.getElementById('budgetContent');
     const backupContent = document.getElementById('backupContent');
     
     function switchTab(activeTab) {
         const isDashboard = activeTab === 'dashboard';
+        const isWeeklyBudget = activeTab === 'weeklyBudget';
+        const isMonthlyBudget = activeTab === 'monthlyBudget';
         const isInEx = activeTab === 'inEx';
-        const isStats = activeTab === 'stats';
         const isBudget = activeTab === 'budget';
+        const isStats = activeTab === 'stats';
         const isBackup = activeTab === 'backup';
 
         tabDashboard.classList.toggle('active', isDashboard);
+        tabWeeklyBudget.classList.toggle('active', isWeeklyBudget);
+        tabMonthlyBudget.classList.toggle('active', isMonthlyBudget);
         tabInEx.classList.toggle('active', isInEx);
-        tabStats.classList.toggle('active', isStats);
         tabBudget.classList.toggle('active', isBudget);
+        tabStats.classList.toggle('active', isStats);
         tabBackup.classList.toggle('active', isBackup);
 
         dashboardContent.classList.toggle('hidden', !isDashboard);
+        weeklyBudgetContent.classList.toggle('hidden', !isWeeklyBudget);
+        monthlyBudgetContent.classList.toggle('hidden', !isMonthlyBudget);
         inExContent.classList.toggle('hidden', !isInEx);
         statsContent.classList.toggle('hidden', !isStats);
-        budgetContent.classList.toggle('hidden', !isBudget);
+        budgetContentEl.classList.toggle('hidden', !isBudget);
         backupContent.classList.toggle('hidden', !isBackup);
 
         // Reset filters and pagination when switching tabs
@@ -204,12 +221,18 @@ document.addEventListener('DOMContentLoaded', () => {
             renderBudgetInputs();
         } else if (isStats) {
             renderAllStats();
+        } else if (isWeeklyBudget) {
+            renderWeeklyBudgetSummary();
+        } else if (isMonthlyBudget) {
+            renderMonthlyBudgetSummary();
         }
     }
     tabDashboard.addEventListener('click', () => switchTab('dashboard'));
+    tabWeeklyBudget.addEventListener('click', () => switchTab('weeklyBudget'));
+    tabMonthlyBudget.addEventListener('click', () => switchTab('monthlyBudget'));
     tabInEx.addEventListener('click', () => switchTab('inEx'));
-    tabStats.addEventListener('click', () => switchTab('stats'));
     tabBudget.addEventListener('click', () => switchTab('budget'));
+    tabStats.addEventListener('click', () => switchTab('stats'));
     tabBackup.addEventListener('click', () => switchTab('backup'));
 
     // --- GENERIC CONFIRMATION MODAL ---
@@ -250,7 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'Mumih': 'bg-blue-100 text-blue-800',
         'Darurat': 'bg-purple-100 text-purple-800',
         'Jajan di luar': 'bg-yellow-100 text-yellow-800',
-        'Dana Cadangan': 'bg-indigo-100 text-indigo-800' // New color for combined card
+        'Dana Cadangan': 'bg-indigo-100 text-indigo-800', // New color for combined card
+        'Tayong': 'bg-teal-100 text-teal-800' // New color for Tayong category
     };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
@@ -276,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentMonthTransactions = transactions.filter(t => t.date.startsWith(currentMonthAndYear));
 
         // Kategori yang akan ditampilkan di ringkasan
-        const summaryCategories = ['Bulanan', 'Mingguan', 'Mumih', 'Jajan di luar', 'Dana Cadangan'];
+        const summaryCategories = ['Mingguan', 'Tayong', 'Saved', 'Dana Cadangan'];
 
         // Tambahkan kartu Total Pengeluaran terlebih dahulu
         const totalExpenses = currentMonthTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -322,6 +346,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
             summarySection.appendChild(card);
+        });
+    };
+
+    const renderWeeklyBudgetSummary = () => {
+        weeklyBudgetSummarySection.innerHTML = '';
+        const currentMonthTransactions = transactions.filter(t => t.date.startsWith(getCurrentMonthAndYear()));
+        
+        weeklyBudgetCategories.forEach(category => {
+            const total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+            const budget = budgets[category] || 0;
+            const remaining = budget - total;
+            const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+            const card = document.createElement('div');
+            card.className = 'summary-card';
+            card.innerHTML = `
+                <h3 class="font-semibold text-slate-500">${category}</h3>
+                <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                <div class="border-t border-dashed mt-2 pt-2">
+                    <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                    <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                </div>
+            `;
+            weeklyBudgetSummarySection.appendChild(card);
+        });
+    };
+
+    const renderMonthlyBudgetSummary = () => {
+        monthlyBudgetSummarySection.innerHTML = '';
+        const currentMonthTransactions = transactions.filter(t => t.date.startsWith(getCurrentMonthAndYear()));
+
+        // Combine categories from dashboard and inEx for monthly budget view
+        const allMonthlyCategories = [...monthlyBudgetCategories, ...inExCategories];
+
+        allMonthlyCategories.forEach(category => {
+            const isTayong = inExCategories.includes(category);
+            const total = isTayong 
+                ? inExTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0)
+                : currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+
+            const budget = budgets[category] || 0;
+            const remaining = budget - total;
+            const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+
+            const card = document.createElement('div');
+            card.className = 'summary-card';
+            card.innerHTML = `
+                <h3 class="font-semibold text-slate-500">${category}</h3>
+                <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                <div class="border-t border-dashed mt-2 pt-2">
+                    <p class="text-xs font-semibold text-slate-500">Anggaran: ${formatCurrency(budget)}</p>
+                    <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                </div>
+            `;
+            monthlyBudgetSummarySection.appendChild(card);
         });
     };
 
@@ -689,14 +767,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LOGIKA BARU UNTUK BUDGET ---
     const renderBudgetInputs = () => {
         budgetInputsContainer.innerHTML = '';
-        const allCategories = [...new Set([...dashboardCategories, ...inExCategories])];
-        allCategories.forEach(category => {
+        const monthlyCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', ...inExCategories];
+        const weeklyCategories = ['Mingguan', 'Tayong'];
+        
+        const monthlyBudgetTitle = document.createElement('h3');
+        monthlyBudgetTitle.className = 'text-lg font-bold mt-6 mb-2 text-slate-700';
+        monthlyBudgetTitle.textContent = 'Anggaran Bulanan';
+        budgetInputsContainer.appendChild(monthlyBudgetTitle);
+
+        monthlyCategories.forEach(category => {
             const budgetValue = budgets[category] || 0;
             const inputGroup = document.createElement('div');
             inputGroup.className = 'mb-4';
             inputGroup.innerHTML = `
-                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category} (Anggaran)</label>
+                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category}</label>
                 <input type="number" id="budget-${category}" name="budget-${category}" placeholder="Contoh: 1000000" min="0" value="${budgetValue}"
+                       class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+            `;
+            budgetInputsContainer.appendChild(inputGroup);
+        });
+
+        const weeklyBudgetTitle = document.createElement('h3');
+        weeklyBudgetTitle.className = 'text-lg font-bold mt-6 mb-2 text-slate-700';
+        weeklyBudgetTitle.textContent = 'Anggaran Mingguan';
+        budgetInputsContainer.appendChild(weeklyBudgetTitle);
+        
+        weeklyCategories.forEach(category => {
+            const budgetValue = budgets[category] || 0;
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'mb-4';
+            inputGroup.innerHTML = `
+                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category}</label>
+                <input type="number" id="budget-${category}" name="budget-${category}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
                        class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
             `;
             budgetInputsContainer.appendChild(inputGroup);
@@ -710,8 +812,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const allCategories = [...new Set([...dashboardCategories, ...inExCategories])];
         allCategories.forEach(category => {
             const input = document.getElementById(`budget-${category}`);
-            const amount = parseFloat(input.value) || 0;
-            newBudgets[category] = amount;
+            if (input) {
+                const amount = parseFloat(input.value) || 0;
+                newBudgets[category] = amount;
+            }
         });
         budgets = { ...budgets, ...newBudgets }; // Perbarui state anggaran
         saveDataToFirestore(); // Simpan ke Firestore
