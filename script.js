@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
     const dailyBudgetCategories = ['Tayong harian'];
     const weeklyBudgetCategories = ['Mingguan', ...dailyBudgetCategories];
-    const monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel'];
+    const monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel', 'Tayong harian'];
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
 
     // Pagination state
@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredTransactions = transactions.filter(t => {
             const matchesText = t.detail.toLowerCase().includes(lowercasedFilter) ||
                                 t.category.toLowerCase().includes(lowercasedFilter) ||
-                                t.payment.toLowerCase().includes(lowercasedFilter);
+                                t.payment.toLowerCase().includes(lowcasedFilter);
             const matchesDate = dashboardFilterDate === '' || t.date === dashboardFilterDate;
             return matchesText && matchesDate;
         });
