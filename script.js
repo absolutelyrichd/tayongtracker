@@ -65,9 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FUNGSI UNTUK MENDAPATKAN NOMOR MINGGU BERDASARKAN TANGGAL ---
     const getWeekNumber = (d) => {
-        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-        const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+        const date = new Date(d);
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() + 4 - (date.getDay() || 7));
+        const yearStart = new Date(date.getFullYear(), 0, 1);
         const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
         return weekNo;
     };
@@ -829,9 +830,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const input = document.getElementById(`budget-${category}-${weekKey}`);
                 if (input) {
                     const amount = parseFloat(input.value) || 0;
-                    if (amount > 0) {
-                        newWeeklyBudgets[weekKey] = amount;
-                    }
+                    // Bug fix: save the value regardless of whether it's > 0.
+                    newWeeklyBudgets[weekKey] = amount;
                 }
             });
         }
