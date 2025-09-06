@@ -315,8 +315,10 @@ document.addEventListener('DOMContentLoaded', () => {
         weeklyBudgetCategories.forEach(category => {
             let total = 0;
             if (category === 'Tayong harian') {
+                // Logika khusus untuk Tayong harian (per hari)
                 total = transactions.filter(t => t.category === category && t.date === currentDateKey).reduce((sum, t) => sum + t.amount, 0);
             } else {
+                // Logika untuk kategori mingguan lainnya
                 total = transactions.filter(t => {
                     const txDate = new Date(t.date);
                     const txWeekNumber = getWeekNumberInMonth(txDate);
@@ -371,6 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-xs font-semibold text-slate-500">Saldo Saved: ${formatCurrency(savedTotal)}</p>
                         <p class="text-xs font-semibold text-slate-500">Saldo Darurat: ${formatCurrency(daruratTotal)}</p>
                     </div>
+                `;
+            } else if (category === 'Saved' || category === 'Darurat') {
+                total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
+
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-500">${category}</h3>
+                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
                 `;
             } else {
                 total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
