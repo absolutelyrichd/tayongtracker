@@ -323,7 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
         weeklyBudgetSummarySection.innerHTML = '';
         const today = new Date();
         const currentWeekNumber = getWeekNumberInMonth(today);
-        const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
+        const currentMonth = today.getMonth() + 1;
+        const currentYear = today.getFullYear();
         const currentDateKey = getCurrentDateKey();
         
         weeklyBudgetCategories.forEach(category => {
@@ -334,8 +335,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 total = transactions.filter(t => {
                     const txDate = new Date(t.date);
                     const txWeekNumber = getWeekNumberInMonth(txDate);
-                    const txWeekKey = `${txDate.getFullYear()}-${txDate.getMonth() + 1}-W${txWeekNumber}`;
-                    return t.category === category && txWeekKey === currentWeekKey;
+                    const txMonth = txDate.getMonth() + 1;
+                    const txYear = txDate.getFullYear();
+                    return t.category === category && txYear === currentYear && txMonth === currentMonth && txWeekNumber <= currentWeekNumber;
                 }).reduce((sum, t) => sum + t.amount, 0);
             }
             
@@ -343,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (category === 'Tayong harian') {
                 budget = dailyBudgets[currentDateKey] || 0;
             } else {
-                budget = weeklyBudgets[category] ? weeklyBudgets[category][currentWeekKey] : 0;
+                budget = weeklyBudgets[category] ? weeklyBudgets[category][`${currentYear}-${currentMonth}-W${currentWeekNumber}`] : 0;
             }
             
             const remaining = budget - total;
