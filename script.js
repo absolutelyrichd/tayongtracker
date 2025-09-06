@@ -63,16 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${year}-${month}`;
     };
 
-    // --- FUNGSI UNTUK MENDAPATKAN NOMOR MINGGU BERDASARKAN TANGGAL ---
-    const getWeekNumber = (d) => {
-      const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      date.setHours(0, 0, 0, 0);
-      // Sunday in current week decides the year.
-      date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-      // January 4 is always in week 1.
-      const week1 = new Date(date.getFullYear(), 0, 4);
-      // Adjust to Thursday in week 1 and count number of weeks from date to week1.
-      return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    // --- FUNGSI UNTUK MENDAPATKAN NOMOR MINGGU BERDASARKAN TANGGAL DI BULAN BERJALAN ---
+    const getWeekNumberInMonth = (d) => {
+      const firstDayOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+      const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 = Minggu, 1 = Senin, dst.
+      const offset = (firstDayOfWeek === 0) ? 7 : firstDayOfWeek;
+      return Math.ceil((d.getDate() + (offset - 1)) / 7);
     };
     
     // --- DOM ELEMENTS ---
@@ -326,12 +322,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderWeeklyBudgetSummary = () => {
         weeklyBudgetSummarySection.innerHTML = '';
         const today = new Date();
-        const currentWeekKey = `${today.getFullYear()}-W${getWeekNumber(today)}`;
+        const currentWeekNumber = getWeekNumberInMonth(today);
+        const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
         
         weeklyBudgetCategories.forEach(category => {
             const total = transactions.filter(t => {
                 const txDate = new Date(t.date);
-                return t.category === category && `${txDate.getFullYear()}-W${getWeekNumber(txDate)}` === currentWeekKey;
+                const txWeekNumber = getWeekNumberInMonth(txDate);
+                const txWeekKey = `${txDate.getFullYear()}-${txDate.getMonth() + 1}-W${txWeekNumber}`;
+                return t.category === category && txWeekKey === currentWeekKey;
             }).reduce((sum, t) => sum + t.amount, 0);
             
             const budget = weeklyBudgets[currentWeekKey] || 0;
@@ -790,9 +789,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Input Anggaran Mingguan akan dipisahkan berdasarkan minggu
         const today = new Date();
         const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1;
         
         for (let i = 1; i <= 4; i++) {
-            const weekKey = `${currentYear}-W${i}`;
+            const weekKey = `${currentYear}-${currentMonth}-W${i}`;
             weeklyBudgetCategories.forEach(category => {
                 const budgetValue = weeklyBudgets[weekKey] || 0;
                 const inputGroup = document.createElement('div');
@@ -825,9 +825,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ambil data anggaran mingguan
         const today = new Date();
         const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1;
 
         for (let i = 1; i <= 4; i++) {
-            const weekKey = `${currentYear}-W${i}`;
+            const weekKey = `${currentYear}-${currentMonth}-W${i}`;
             weeklyBudgetCategories.forEach(category => {
                 const input = document.getElementById(`budget-${category}-${weekKey}`);
                 if (input) {
@@ -862,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const categoryTotals = categoriesToShow.map(category => {
             let total = 0;
             const isInEx = inExCategories.includes(category);
-            total = isInEx
+            total = isInEx 
                 ? inExTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0)
                 : currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
             return { category: category, total: total };
