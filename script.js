@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredTransactions = transactions.filter(t => {
             const matchesText = t.detail.toLowerCase().includes(lowercasedFilter) ||
                                 t.category.toLowerCase().includes(lowercasedFilter) ||
-                                t.payment.toLowerCase().includes(lowcasedFilter);
+                                t.payment.toLowerCase().includes(lowercasedFilter);
             const matchesDate = dashboardFilterDate === '' || t.date === dashboardFilterDate;
             return matchesText && matchesDate;
         });
