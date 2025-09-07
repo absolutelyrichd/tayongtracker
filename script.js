@@ -276,12 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmMessage.textContent = config.message;
         confirmAction.className = config.confirmClass;
         confirmAction.textContent = config.confirmText;
-        confirmAction.onclick = () => {
-            if (actionToConfirm && typeof actionToConfirm === 'function') {
-                actionToConfirm(confirmationInput ? confirmationInput.value.trim() : null);
-            }
-            closeConfirmationModal();
-        };
+        
+        // Atur actionToConfirm
+        actionToConfirm = config.action;
 
         // Handle input field for editing
         if (config.showInput) {
@@ -307,14 +304,16 @@ document.addEventListener('DOMContentLoaded', () => {
         actionToConfirm = null;
     }
     
-    // Perbarui event listener untuk modal konfirmasi
-    confirmAction.addEventListener('click', () => {
+    // Perbaiki event listener untuk modal konfirmasi
+    confirmAction.onclick = () => {
         if (actionToConfirm && typeof actionToConfirm === 'function') {
-            actionToConfirm();
+            const inputVal = confirmationInput ? confirmationInput.value.trim() : null;
+            actionToConfirm(inputVal);
         }
         closeConfirmationModal();
-    });
-    cancelConfirm.addEventListener('click', closeConfirmationModal);
+    };
+
+    cancelConfirm.onclick = closeConfirmationModal;
     confirmationModal.addEventListener('click', (e) => { if (e.target === confirmationModal) closeConfirmationModal(); });
     
     // --- DASHBOARD (UMUM) LOGIC ---
@@ -842,8 +841,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const removeCardFromDisplay = (categoryName, type) => {
         if (type === 'monthly') {
             monthlyBudgetCategories = monthlyBudgetCategories.filter(cat => cat !== categoryName);
+            renderMonthlyBudgetSummary();
         } else if (type === 'weekly') {
             weeklyBudgetCategories = weeklyBudgetCategories.filter(cat => cat !== categoryName);
+            renderWeeklyBudgetSummary();
         }
         saveDataToFirestore();
     };
@@ -992,6 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveDataToFirestore();
+        renderAll(); // Memastikan UI diperbarui setelah perubahan
     };
 
     // Fungsi untuk menghapus kategori
