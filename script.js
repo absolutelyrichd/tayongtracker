@@ -410,7 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const txDate = new Date(t.date);
             const txWeekNumber = getWeekNumberInMonth(txDate);
             const txMonthAndYear = `${txDate.getFullYear()}-${(txDate.getMonth() + 1).toString().padStart(2, '0')}`;
-            return t.category === category && txWeekNumber === weekNumber && txMonthAndYear === currentMonthAndYear;
+            // Memastikan transaksi di minggu ke-5 dialokasikan ke minggu ke-4
+            const adjustedWeekNumber = (txWeekNumber === 5) ? 4 : txWeekNumber;
+            return t.category === category && adjustedWeekNumber === weekNumber && txMonthAndYear === currentMonthAndYear;
         }).reduce((sum, t) => sum + t.amount, 0);
     };
 
@@ -670,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
             header.className = 'flex justify-between items-center mb-2 pb-2 border-b border-slate-200';
             header.innerHTML = `
                 <div>
-                    <h3 class="text-md font-bold text-slate-800">${formatDate(date)}</h3>
+                    <h3 class="font-bold text-slate-800">${formatDate(date)}</h3>
                 </div>
                 <div>
                     <span class="text-sm text-slate-500">Pengeluaran: </span>
