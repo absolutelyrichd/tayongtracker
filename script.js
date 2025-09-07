@@ -414,6 +414,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }).reduce((sum, t) => sum + t.amount, 0);
     };
 
+    // --- LOGIKA BARU UNTUK MENGAMBIL BUDGET MINGGUAN DENGAN LEBIH BAIK ---
+    const getWeeklyBudgetForCategory = (category, weekNumber, currentMonthAndYear) => {
+        const weekKey = `${currentMonthAndYear}-W${weekNumber}`;
+        if (weeklyBudgets[category] && weeklyBudgets[category][weekKey]) {
+            return weeklyBudgets[category][weekKey];
+        }
+        return 0;
+    };
+    
     const renderWeeklyBudgetSummary = () => {
         weeklyBudgetSummarySection.innerHTML = '';
         const today = new Date();
@@ -434,8 +443,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Render 4 kartu per minggu untuk Belanja Mingguan dan Tayong jajan
                 for (let i = 1; i <= 4; i++) {
                     const total = getWeeklyTotalForCategory(category, i, currentMonthAndYear);
-                    const weekKey = `${currentMonthAndYear}-W${i}`;
-                    const budget = weeklyBudgets[category] && weeklyBudgets[category][weekKey] ? weeklyBudgets[category][weekKey] : 0;
+                    
+                    // --- PERBAIKAN DI SINI ---
+                    const budget = getWeeklyBudgetForCategory(category, i, currentMonthAndYear);
+                    // --- AKHIR PERBAIKAN ---
+
                     const remaining = budget - total;
                     const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
                     
@@ -478,8 +490,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     budget = dailyBudgets[getCurrentDateKey()] || 0;
                 } else {
                     const currentWeekNumber = getWeekNumberInMonth(today);
-                    const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
-                    budget = weeklyBudgets[category] && weeklyBudgets[category][currentWeekKey] ? weeklyBudgets[category][currentWeekKey] : 0;
+                    const currentMonthAndYear = getCurrentMonthAndYear(); // Tambahkan ini
+                    const weekKey = `${currentMonthAndYear}-W${currentWeekNumber}`; // Perbarui weekKey
+                    budget = weeklyBudgets[category] && weeklyBudgets[category][weekKey] ? weeklyBudgets[category][weekKey] : 0;
                 }
                 
                 const remaining = budget - total;
@@ -835,7 +848,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const currentYear = today.getFullYear();
                     const currentMonth = today.getMonth() + 1;
                     const weekKey = `${currentYear}-${currentMonth}-W${i}`;
+                    // --- PERBAIKAN DI SINI ---
                     const budgetValue = (weeklyBudgets[category] && weeklyBudgets[category][weekKey]) ? weeklyBudgets[category][weekKey] : 0;
+                    // --- AKHIR PERBAIKAN ---
                     const inputGroup = document.createElement('div');
                     inputGroup.className = 'mb-4';
                     inputGroup.innerHTML = `
