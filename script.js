@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let dashboardChartInstance = null;
     
     // Kategori untuk tab "Umum"
-    let dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
-    let dailyBudgetCategories = ['Tayong harian'];
+    const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
+    const dailyBudgetCategories = ['Tayong harian'];
     let weeklyBudgetCategories = ['Mingguan', ...dailyBudgetCategories]; // Make this `let`
     let monthlyBudgetCategories = ['Bulanan', 'Mingguan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel', 'Tayong harian']; // Make this `let`
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
@@ -675,7 +675,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setDefaultDate(dateInput);
         modalTitle.textContent = 'Tambah Transaksi Baru';
         submitTransactionBtn.innerHTML = `<i class="fas fa-save mr-2"></i>Simpan Transaksi`;
-        renderCategorySelectOptions();
         addTransactionModal.classList.remove('hidden');
     };
     const openEditModal = (id) => {
@@ -686,7 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
         amountInput.value = tx.amount; paymentSelect.value = tx.payment;
         modalTitle.textContent = 'Edit Transaksi';
         submitTransactionBtn.innerHTML = `<i class="fas fa-save mr-2"></i>Update Transaksi`;
-        renderCategorySelectOptions();
         addTransactionModal.classList.remove('hidden');
     };
     const closeTransactionModal = () => addTransactionModal.classList.add('hidden');
@@ -916,57 +914,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (categoryToEdit) {
             // Logika untuk mengedit kategori
             const oldName = categoryToEdit;
-            
-            // Periksa apakah nama kategori baru sudah ada
-            if ((dashboardCategories.includes(newCategoryName) && newCategoryName !== oldName) || (userDefinedCategories[newCategoryName] && newCategoryName !== oldName)) {
-                openConfirmationModal({
-                    title: 'Nama Sudah Ada',
-                    message: 'Nama kategori baru sudah digunakan. Silakan gunakan nama lain.',
-                    confirmText: 'OK',
-                    confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
-                    action: () => {}
-                });
-                return;
-            }
-
-            // Perbarui kategori bawaan atau yang ditentukan pengguna
-            if (dashboardCategories.includes(oldName)) {
-                // Perbarui kategori bawaan
-                const oldDashboardIndex = dashboardCategories.indexOf(oldName);
-                if (oldDashboardIndex !== -1) {
-                    dashboardCategories[oldDashboardIndex] = newCategoryName;
-                }
-                const oldMonthlyIndex = monthlyBudgetCategories.indexOf(oldName);
-                if (oldMonthlyIndex !== -1) {
-                    monthlyBudgetCategories[oldMonthlyIndex] = newCategoryName;
-                }
-                const oldWeeklyIndex = weeklyBudgetCategories.indexOf(oldName);
-                if (oldWeeklyIndex !== -1) {
-                    weeklyBudgetCategories[oldWeeklyIndex] = newCategoryName;
-                }
-            } else if (oldName in userDefinedCategories) {
-                // Perbarui kategori yang ditentukan pengguna
+            if (oldName in userDefinedCategories) {
                 userDefinedCategories[newCategoryName] = { tab: newCategoryTab };
                 delete userDefinedCategories[oldName];
+                // Perbarui semua transaksi yang menggunakan nama lama
+                transactions = transactions.map(t => t.category === oldName ? { ...t, category: newCategoryName } : t);
             }
-            
-            // Perbarui semua data yang terkait
-            transactions = transactions.map(t => t.category === oldName ? { ...t, category: newCategoryName } : t);
-            
-            // Perbarui budgets
-            if(budgets[oldName]) {
-                budgets[newCategoryName] = budgets[oldName];
-                delete budgets[oldName];
-            }
-            if(weeklyBudgets[oldName]) {
-                weeklyBudgets[newCategoryName] = weeklyBudgets[oldName];
-                delete weeklyBudgets[oldName];
-            }
-            if(dailyBudgets[oldName]) {
-                dailyBudgets[newCategoryName] = dailyBudgets[oldName];
-                delete dailyBudgets[oldName];
-            }
-
             categoryToEdit = null;
         } else {
             // Logika untuk menambah kategori baru
@@ -1005,19 +958,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const categoryName = editBtn.dataset.category;
             categoryToEdit = categoryName;
             
+            if (dashboardCategories.includes(categoryName)) {
+                 openConfirmationModal({
+                    title: 'Tidak Bisa Diedit',
+                    message: `Kategori bawaan tidak bisa diedit.`,
+                    confirmText: 'OK',
+                    confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                    action: () => {}
+                });
+                return;
+            }
+            
             // Isi form dengan data kategori yang akan diedit
             categoryNameInput.value = categoryName;
-            
-            // Tentukan tab dari mana kategori ini berasal
-            if (userDefinedCategories[categoryName]) {
-                categoryTabSelect.value = userDefinedCategories[categoryName].tab;
-            } else {
-                if (monthlyBudgetCategories.includes(categoryName)) {
-                    categoryTabSelect.value = 'monthly';
-                } else if (weeklyBudgetCategories.includes(categoryName)) {
-                    categoryTabSelect.value = 'weekly';
-                }
-            }
+            categoryTabSelect.value = userDefinedCategories[categoryName].tab;
             addCategoryBtn.textContent = 'Simpan Perubahan';
         }
 
