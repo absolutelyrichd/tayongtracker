@@ -344,8 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DASHBOARD (UMUM) LOGIC ---
     const paymentTypes = ['Cash', 'Gopay'];
     const categoryColors = { 
-        'Bulanan': 'bg-red-100 text-red-800',
-        'Mingguan': 'bg-orange-100 text-orange-800',
+        'Belanja Bulanan': 'bg-red-100 text-red-800',
+        'Belanja Mingguan': 'bg-orange-100 text-orange-800',
         'Saved': 'bg-gray-100 text-gray-800',
         'Mumih': 'bg-blue-100 text-blue-800',
         'Darurat': 'bg-purple-100 text-purple-800',
@@ -362,6 +362,17 @@ document.addEventListener('DOMContentLoaded', () => {
         'Kesehatan': 'bg-rose-100 text-rose-800',
         'Pendidikan': 'bg-teal-100 text-teal-800',
         'Tagihan': 'bg-amber-100 text-amber-800'
+    };
+    const availableColors = ['bg-fuchsia-100 text-fuchsia-800', 'bg-lime-100 text-lime-800', 'bg-cyan-100 text-cyan-800', 'bg-violet-100 text-violet-800', 'bg-rose-100 text-rose-800', 'bg-teal-100 text-teal-800', 'bg-amber-100 text-amber-800', 'bg-emerald-100 text-emerald-800', 'bg-indigo-100 text-indigo-800', 'bg-pink-100 text-pink-800'];
+    const getCategoryColor = (category) => {
+        let color = categoryColors[category];
+        if (!color) {
+            const assignedColors = Object.values(categoryColors);
+            const available = availableColors.filter(c => !assignedColors.includes(c));
+            color = available.length > 0 ? available[0] : 'bg-gray-100 text-gray-800';
+            categoryColors[category] = color;
+        }
+        return color;
     };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
@@ -608,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 transactionItem.className = 'flex justify-between items-center py-2 border-b border-slate-100 last:border-b-0';
                 transactionItem.innerHTML = `
                     <div class="flex items-center gap-3 flex-grow">
-                        <span class="px-2 py-1 text-xs font-medium rounded-full ${categoryColors[t.category] || 'bg-gray-100 text-gray-800'}">${t.category}</span>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(t.category)}">${t.category}</span>
                         <div class="flex-grow">
                             <p class="font-semibold text-slate-800">${t.detail}</p>
                             <p class="text-xs text-slate-500">${t.payment}</p>
@@ -1196,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="font-semibold text-slate-800">${t.detail}</p>
                         <p class="text-xs text-slate-500">${formatDate(t.date)} - ${formatCurrency(t.amount)}</p>
                     </div>
-                    <span class="px-2 py-1 text-xs font-medium rounded-full ${categoryColors[t.category] || 'bg-gray-100 text-gray-800'}">${t.category}</span>
+                    <span class="px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(t.category)}">${t.category}</span>
                 `;
                 bulkTransactionsList.appendChild(transactionItem);
             });
