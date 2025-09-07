@@ -830,6 +830,9 @@ document.addEventListener('DOMContentLoaded', () => {
         weeklyBudgetTitle.textContent = 'Budget Mingguan';
         budgetInputsContainer.appendChild(weeklyBudgetTitle);
         
+        // --- PERBAIKAN DI SINI ---
+        // Menggunakan getCurrentMonthAndYear() untuk mendapatkan format bulan yang konsisten dengan getWeeklyBudgetForCategory
+        const currentMonthAndYear = getCurrentMonthAndYear();
         weeklyBudgetCategories.forEach(category => {
             if (category === 'Tayong harian') {
                 const currentDateKey = getCurrentDateKey();
@@ -844,13 +847,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 budgetInputsContainer.appendChild(inputGroup);
             } else if (category === 'Belanja Mingguan' || category === 'Tayong jajan') {
                 for (let i = 1; i <= 4; i++) {
-                    const today = new Date();
-                    const currentYear = today.getFullYear();
-                    const currentMonth = today.getMonth() + 1;
-                    const weekKey = `${currentYear}-${currentMonth}-W${i}`;
-                    // --- PERBAIKAN DI SINI ---
+                    // Menggunakan currentMonthAndYear yang konsisten
+                    const weekKey = `${currentMonthAndYear}-W${i}`;
                     const budgetValue = (weeklyBudgets[category] && weeklyBudgets[category][weekKey]) ? weeklyBudgets[category][weekKey] : 0;
-                    // --- AKHIR PERBAIKAN ---
                     const inputGroup = document.createElement('div');
                     inputGroup.className = 'mb-4';
                     inputGroup.innerHTML = `
@@ -863,9 +862,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                  const today = new Date();
                  const currentWeekNumber = getWeekNumberInMonth(today);
-                 const currentYear = today.getFullYear();
-                 const currentMonth = today.getMonth() + 1;
-                 const weekKey = `${currentYear}-${currentMonth}-W${currentWeekNumber}`;
+                 const currentMonthAndYearForOther = getCurrentMonthAndYear();
+                 const weekKey = `${currentMonthAndYearForOther}-W${currentWeekNumber}`;
                  const budgetValue = (weeklyBudgets[category] && weeklyBudgets[category][weekKey]) ? weeklyBudgets[category][weekKey] : 0;
                  const inputGroup = document.createElement('div');
                  inputGroup.className = 'mb-4';
@@ -898,7 +896,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ambil data budget mingguan & harian
         const today = new Date();
         const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth() + 1;
+        // --- PERBAIKAN DI SINI ---
+        // Menggunakan getCurrentMonthAndYear() untuk mendapatkan format bulan yang konsisten saat menyimpan
+        const currentMonthAndYear = getCurrentMonthAndYear();
+        // --- AKHIR PERBAIKAN ---
         const currentDateKey = getCurrentDateKey();
         
         weeklyBudgetCategories.forEach(category => {
@@ -910,7 +911,8 @@ document.addEventListener('DOMContentLoaded', () => {
                  }
             } else if (category === 'Belanja Mingguan' || category === 'Tayong jajan') {
                  for (let i = 1; i <= 4; i++) {
-                     const weekKey = `${currentYear}-${currentMonth}-W${i}`;
+                     // Menggunakan currentMonthAndYear yang konsisten
+                     const weekKey = `${currentMonthAndYear}-W${i}`;
                      const input = document.getElementById(`budget-${category}-${weekKey}`);
                      if (input) {
                          const amount = parseFloat(input.value) || 0;
@@ -922,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  }
             } else {
                  const currentWeekNumber = getWeekNumberInMonth(today);
-                 const weekKey = `${currentYear}-${currentMonth}-W${currentWeekNumber}`;
+                 const weekKey = `${currentMonthAndYear}-W${currentWeekNumber}`;
                  const input = document.getElementById(`budget-${category}-${weekKey}`);
                  if (input) {
                      const amount = parseFloat(input.value) || 0;
