@@ -904,6 +904,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         newCategoryNameInput.value = '';
         saveDataToFirestore();
+        renderMonthlyBudgetSummary(); // Tambahan: Perbarui tampilan budget bulanan
+        renderWeeklyBudgetSummary(); // Tambahan: Perbarui tampilan budget mingguan
     });
 
     // Event listener untuk tombol edit dan hapus kategori
