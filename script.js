@@ -1117,9 +1117,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fungsi untuk merender UI Aksi Masal dan dropdown-nya
     const renderBulkActionUI = () => {
+        // Mendapatkan semua kategori unik dari transaksi
+        const uniqueCategoriesInTransactions = [...new Set(transactions.map(t => t.category))];
+
         // Populate "Pilih Kategori Lama" dropdown
         bulkOldCategorySelect.innerHTML = '<option value="" disabled selected>Pilih kategori lama</option>';
-        allCategories.forEach(cat => {
+        uniqueCategoriesInTransactions.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
             option.textContent = cat;
