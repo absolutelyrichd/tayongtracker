@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         projectId: "tayongtracker",
         storageBucket: "tayongtracker.appspot.com",
         messagingSenderId: "986883833587",
-        appId: "1:986883833587:web:2b234bf1d453651bc28186",
+        appId: "1:9868833587:web:2b234bf1d453651bc28186",
         measurementId: "G-YVJHH89S24"
     };
 
@@ -354,7 +354,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'Tayong harian': 'bg-green-100 text-green-800', // New color for Harian
         'Tayong weekend': 'bg-pink-100 text-pink-800', // New color for Weekend
         'Tayong fleksibel': 'bg-sky-100 text-sky-800', // New color for Fleksibel
-        'Tidak Terkategori': 'bg-gray-400 text-gray-900' // New color for 'Tidak Terkategori'
+        'Tidak Terkategori': 'bg-gray-400 text-gray-900', // New color for 'Tidak Terkategori'
+        'Belanja': 'bg-fuchsia-100 text-fuchsia-800',
+        'Transportasi': 'bg-lime-100 text-lime-800',
+        'Makanan': 'bg-cyan-100 text-cyan-800',
+        'Hiburan': 'bg-violet-100 text-violet-800',
+        'Kesehatan': 'bg-rose-100 text-rose-800',
+        'Pendidikan': 'bg-teal-100 text-teal-800',
+        'Tagihan': 'bg-amber-100 text-amber-800'
     };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
