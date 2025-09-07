@@ -103,6 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const newCategoryMonthlyCheckbox = document.getElementById('newCategoryMonthly');
     const newCategoryWeeklyCheckbox = document.getElementById('newCategoryWeekly');
     const categoryListContainer = document.getElementById('categoryListContainer');
+    // New DOM elements for adding existing categories
+    const addExistingCategoryForm = document.getElementById('addExistingCategoryForm');
+    const existingCategorySelect = document.getElementById('existingCategorySelect');
+    const existingCategoryMonthlyCheckbox = document.getElementById('existingCategoryMonthly');
+    const existingCategoryWeeklyCheckbox = document.getElementById('existingCategoryWeekly');
 
     // --- AUTHENTICATION ---
     loginBtn.addEventListener('click', () => {
@@ -198,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAllStats();
         updateCategorySelects();
         renderCategoryList();
+        renderAddExistingCategoryDropdown(); // NEW: Call the function to render the existing categories dropdown
     }
 
     // --- TABS ---
@@ -254,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderMonthlyBudgetSummary();
         } else if (isCategoryManagement) {
             renderCategoryList();
+            renderAddExistingCategoryDropdown();
         }
     }
     tabDashboard.addEventListener('click', () => switchTab('dashboard'));
@@ -739,19 +746,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 budgetInputsContainer.appendChild(inputGroup);
             } else {
                 for (let i = 1; i <= 4; i++) {
-                    const today = new Date();
-                    const currentYear = today.getFullYear();
-                    const currentMonth = today.getMonth() + 1;
                     const weekKey = `${currentYear}-${currentMonth}-W${i}`;
-                    const budgetValue = weeklyBudgets[category] ? weeklyBudgets[category][weekKey] : 0;
-                    const inputGroup = document.createElement('div');
-                    inputGroup.className = 'mb-4';
-                    inputGroup.innerHTML = `
-                        <label for="budget-${category}-${weekKey}" class="block text-sm font-medium text-slate-600">${category} (Minggu ke-${i})</label>
-                        <input type="number" id="budget-${category}-${weekKey}" name="budget-${category}-${weekKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
-                            class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-                    `;
-                    budgetInputsContainer.appendChild(inputGroup);
+                    const input = document.getElementById(`budget-${category}-${weekKey}`);
+                    if (input) {
+                        const amount = parseFloat(input.value) || 0;
+                        if (!newWeeklyBudgets[category]) {
+                            newWeeklyBudgets[category] = {};
+                        }
+                        newWeeklyBudgets[category][weekKey] = amount;
+                    }
                 }
             }
         });
@@ -925,6 +928,55 @@ document.addEventListener('DOMContentLoaded', () => {
         saveDataToFirestore();
         renderMonthlyBudgetSummary(); // Perbarui tampilan budget bulanan
         renderWeeklyBudgetSummary(); // Perbarui tampilan budget mingguan
+    });
+
+    // NEW: Fungsi untuk merender dropdown kategori yang sudah ada
+    const renderAddExistingCategoryDropdown = () => {
+        existingCategorySelect.innerHTML = '';
+        const displayedCategories = [...monthlyBudgetCategories, ...weeklyBudgetCategories];
+        const categoriesToAdd = allCategories.filter(cat => !displayedCategories.includes(cat));
+
+        if (categoriesToAdd.length > 0) {
+            existingCategorySelect.disabled = false;
+            categoriesToAdd.forEach(cat => existingCategorySelect.add(new Option(cat, cat)));
+        } else {
+            existingCategorySelect.disabled = true;
+            existingCategorySelect.add(new Option("Tidak ada kategori yang tersedia", ""));
+        }
+    };
+    
+    // NEW: Event listener untuk formulir penambahan kategori yang sudah ada
+    addExistingCategoryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const categoryToAdd = existingCategorySelect.value;
+        const showInMonthly = existingCategoryMonthlyCheckbox.checked;
+        const showInWeekly = existingCategoryWeeklyCheckbox.checked;
+        
+        if (!categoryToAdd || (!showInMonthly && !showInWeekly)) {
+            openConfirmationModal({
+                title: 'Error',
+                message: 'Pilih kategori dan setidaknya satu tab untuk menampilkan kartu.',
+                confirmText: 'OK',
+                confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                action: () => {}
+            });
+            return;
+        }
+
+        if (showInMonthly && !monthlyBudgetCategories.includes(categoryToAdd)) {
+            monthlyBudgetCategories.push(categoryToAdd);
+        }
+
+        if (showInWeekly && !weeklyBudgetCategories.includes(categoryToAdd)) {
+            weeklyBudgetCategories.push(categoryToAdd);
+        }
+
+        saveDataToFirestore();
+        renderAll();
+        
+        // Reset form
+        existingCategoryMonthlyCheckbox.checked = false;
+        existingCategoryWeeklyCheckbox.checked = false;
     });
 
     // Event listener untuk tombol edit dan hapus kategori

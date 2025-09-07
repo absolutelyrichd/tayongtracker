@@ -264,7 +264,7 @@
                         <h2 class="text-xl font-bold mb-4">Manajemen Kategori</h2>
                         <p class="text-slate-500 mb-6">Tambah, edit, dan hapus kategori pengeluaran Anda.</p>
                         
-                        <!-- Form Tambah Kategori -->
+                        <!-- Form Tambah Kategori Baru -->
                         <div class="mb-8">
                             <h3 class="text-lg font-semibold mb-2">Tambah Kategori Baru</h3>
                             <form id="addCategoryForm" class="flex flex-col sm:flex-row gap-4 items-end">
@@ -287,6 +287,35 @@
                                 </div>
                                 <button type="submit" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm">
                                     <i class="fas fa-plus-circle mr-2"></i>Tambah
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- NEW: Form untuk Menampilkan Kategori yang Ada -->
+                        <div class="mb-8 border-t border-slate-200 pt-6">
+                            <h3 class="text-lg font-semibold mb-2">Tampilkan Kategori yang Ada</h3>
+                            <form id="addExistingCategoryForm" class="flex flex-col sm:flex-row gap-4 items-end">
+                                <div class="w-full sm:flex-1">
+                                    <label for="existingCategorySelect" class="block text-sm font-medium text-slate-600">Pilih Kategori</label>
+                                    <select id="existingCategorySelect" name="existingCategorySelect" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                                        <!-- Opsi akan ditambahkan secara dinamis oleh JS -->
+                                    </select>
+                                </div>
+                                <div class="w-full sm:flex-1">
+                                    <p class="block text-sm font-medium text-slate-600">Tampilkan di Tab:</p>
+                                    <div class="mt-2 flex items-center space-x-4">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="existingCategoryMonthly" name="existingCategoryMonthly" class="h-4 w-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500">
+                                            <label for="existingCategoryMonthly" class="ml-2 text-sm text-slate-700">Budget Bulanan</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="existingCategoryWeekly" name="existingCategoryWeekly" class="h-4 w-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500">
+                                            <label for="existingCategoryWeekly" class="ml-2 text-sm text-slate-700">Budget Mingguan</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full sm:w-auto bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors text-sm">
+                                    <i class="fas fa-plus-circle mr-2"></i>Tampilkan Kartu
                                 </button>
                             </form>
                         </div>
