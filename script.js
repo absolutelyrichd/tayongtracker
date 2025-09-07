@@ -339,7 +339,14 @@ document.addEventListener('DOMContentLoaded', () => {
         weeklyBudgetCategories.forEach(category => {
             let total = 0;
             if (category === 'Tayong harian') {
-                total = transactions.filter(t => t.category === category && t.date === currentDateKey).reduce((sum, t) => sum + t.amount, 0);
+                // Perhitungan pengeluaran mingguan untuk Tayong harian
+                total = transactions.filter(t => {
+                    const txDate = new Date(t.date);
+                    const txWeekNumber = getWeekNumberInMonth(txDate);
+                    const txMonth = txDate.getMonth() + 1;
+                    const txYear = txDate.getFullYear();
+                    return t.category === category && txYear === currentYear && txMonth === currentMonth && txWeekNumber === currentWeekNumber;
+                }).reduce((sum, t) => sum + t.amount, 0);
             } else {
                 total = transactions.filter(t => {
                     const txDate = new Date(t.date);
@@ -352,7 +359,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let budget = 0;
             if (category === 'Tayong harian') {
-                budget = dailyBudgets[currentDateKey] || 0;
+                // Perhitungan budget mingguan untuk Tayong harian
+                const dailyBudget = dailyBudgets[currentDateKey] || 0;
+                budget = dailyBudget * 7;
             } else {
                 budget = weeklyBudgets[category] ? weeklyBudgets[category][`${currentYear}-${currentMonth}-W${currentWeekNumber}`] : 0;
             }
