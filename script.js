@@ -392,78 +392,85 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Kategori yang akan memiliki kartu perminggu
         const categoriesWithWeeklyCards = ['Belanja Mingguan', 'Tayong jajan'];
+        
+        // Gabungkan kategori mingguan lainnya
+        const otherWeeklyCategories = ['Mingguan', 'Tayong harian'];
+        const allWeeklyCards = [...categoriesWithWeeklyCards, ...otherWeeklyCategories];
+        
+        // Urutkan kartu berdasarkan urutan yang tersimpan di weeklyBudgetCategories
+        const orderedCategories = weeklyBudgetCategories.filter(cat => allWeeklyCards.includes(cat));
 
-        categoriesWithWeeklyCards.forEach(category => {
-            for (let i = 1; i <= 4; i++) {
-                const total = getWeeklyTotalForCategory(category, i, currentMonthAndYear);
-                const weekKey = `${currentMonthAndYear}-W${i}`;
-                const budget = weeklyBudgets[category] ? weeklyBudgets[category][weekKey] : 0;
+        orderedCategories.forEach(category => {
+            if (categoriesWithWeeklyCards.includes(category)) {
+                // Render 4 kartu per minggu untuk Belanja Mingguan dan Tayong jajan
+                for (let i = 1; i <= 4; i++) {
+                    const total = getWeeklyTotalForCategory(category, i, currentMonthAndYear);
+                    const weekKey = `${currentMonthAndYear}-W${i}`;
+                    const budget = weeklyBudgets[category] && weeklyBudgets[category][weekKey] ? weeklyBudgets[category][weekKey] : 0;
+                    const remaining = budget - total;
+                    const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+                    
+                    const card = document.createElement('div');
+                    card.className = 'summary-card relative';
+                    card.setAttribute('draggable', 'true');
+                    card.dataset.category = category;
+                    card.innerHTML = `
+                        <h3 class="font-semibold text-slate-500">${category} - Minggu ${i}</h3>
+                        <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                        <div class="border-t border-dashed mt-2 pt-2">
+                            <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
+                            <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                        </div>
+                        <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="weekly" title="Hapus Kartu">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    `;
+                    weeklyBudgetSummarySection.appendChild(card);
+                }
+            } else if (otherWeeklyCategories.includes(category)) {
+                // Render kartu tunggal untuk kategori mingguan lainnya
+                let total = 0;
+                if (category === 'Tayong harian') {
+                    total = transactions.filter(t => t.category === category && t.date === getCurrentDateKey()).reduce((sum, t) => sum + t.amount, 0);
+                } else {
+                    total = transactions.filter(t => {
+                        const txDate = new Date(t.date);
+                        const txWeekNumber = getWeekNumberInMonth(txDate);
+                        const currentWeekNumber = getWeekNumberInMonth(today);
+                        const txWeekKey = `${txDate.getFullYear()}-${txDate.getMonth() + 1}-W${txWeekNumber}`;
+                        const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
+                        return t.category === category && txWeekKey === currentWeekKey;
+                    }).reduce((sum, t) => sum + t.amount, 0);
+                }
+                
+                let budget = 0;
+                if (category === 'Tayong harian') {
+                    budget = dailyBudgets[getCurrentDateKey()] || 0;
+                } else {
+                    const currentWeekNumber = getWeekNumberInMonth(today);
+                    const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
+                    budget = weeklyBudgets[category] && weeklyBudgets[category][currentWeekKey] ? weeklyBudgets[category][currentWeekKey] : 0;
+                }
+                
                 const remaining = budget - total;
                 const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
-                
                 const card = document.createElement('div');
-                card.className = 'summary-card';
+                card.className = 'summary-card relative';
                 card.setAttribute('draggable', 'true');
-                card.dataset.category = category;
+                card.dataset.category = category; // Add a data attribute for drag and drop
                 card.innerHTML = `
-                    <h3 class="font-semibold text-slate-500">${category} - Minggu ${i}</h3>
+                    <h3 class="font-semibold text-slate-500">${category}</h3>
                     <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
                     <div class="border-t border-dashed mt-2 pt-2">
                         <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
                         <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
-                        <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="weekly" title="Hapus Kartu">
-                            <i class="fas fa-times-circle"></i>
-                        </button>
                     </div>
-                `;
-                weeklyBudgetSummarySection.appendChild(card);
-            }
-        });
-
-        // Tampilkan kartu untuk kategori mingguan lainnya seperti 'Mingguan' dan 'Tayong harian'
-        const otherWeeklyCategories = ['Mingguan', 'Tayong harian'];
-        otherWeeklyCategories.forEach(category => {
-            let total = 0;
-            if (category === 'Tayong harian') {
-                total = transactions.filter(t => t.category === category && t.date === getCurrentDateKey()).reduce((sum, t) => sum + t.amount, 0);
-            } else {
-                total = transactions.filter(t => {
-                    const txDate = new Date(t.date);
-                    const txWeekNumber = getWeekNumberInMonth(txDate);
-                    const currentWeekNumber = getWeekNumberInMonth(today);
-                    const txWeekKey = `${txDate.getFullYear()}-${txDate.getMonth() + 1}-W${txWeekNumber}`;
-                    const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
-                    return t.category === category && txWeekKey === currentWeekKey;
-                }).reduce((sum, t) => sum + t.amount, 0);
-            }
-            
-            let budget = 0;
-            if (category === 'Tayong harian') {
-                budget = dailyBudgets[getCurrentDateKey()] || 0;
-            } else {
-                const currentWeekNumber = getWeekNumberInMonth(today);
-                const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
-                budget = weeklyBudgets[category] ? weeklyBudgets[category][currentWeekKey] : 0;
-            }
-            
-            const remaining = budget - total;
-            const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
-            const card = document.createElement('div');
-            card.className = 'summary-card';
-            card.setAttribute('draggable', 'true');
-            card.dataset.category = category; // Add a data attribute for drag and drop
-            card.innerHTML = `
-                <h3 class="font-semibold text-slate-500">${category}</h3>
-                <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
-                <div class="border-t border-dashed mt-2 pt-2">
-                    <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
-                    <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
                     <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="weekly" title="Hapus Kartu">
                         <i class="fas fa-times-circle"></i>
                     </button>
-                </div>
-            `;
-            weeklyBudgetSummarySection.appendChild(card);
+                `;
+                weeklyBudgetSummarySection.appendChild(card);
+            }
         });
         addDragAndDropEventListeners(weeklyBudgetSummarySection, 'weekly');
     };
