@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Kategori untuk tab "Umum"
     let allCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
     let monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel'];
-    let weeklyBudgetCategories = ['Mingguan', 'Tayong harian'];
+    let weeklyBudgetCategories = ['Mingguan', 'Tayong harian', 'Belanja Mingguan', 'Tayong jajan'];
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
 
     // Pagination state
@@ -155,36 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- FIRESTORE DATA HANDLING ---
-    const listenToData = (uid) => {
-        if (unsubscribe) unsubscribe();
-        const docRef = db.collection('users').doc(uid);
-        unsubscribe = docRef.onSnapshot(doc => {
-            if (doc.exists) {
-                const data = doc.data();
-                transactions = data.transactions || [];
-                budgets = data.budgets || {};
-                weeklyBudgets = data.weeklyBudgets || {};
-                dailyBudgets = data.dailyBudgets || {};
-                allCategories = data.allCategories || allCategories;
-                // Load saved card order
-                if (data.monthlyBudgetCategoriesOrder) {
-                    monthlyBudgetCategories = data.monthlyBudgetCategoriesOrder;
-                }
-                if (data.weeklyBudgetCategoriesOrder) {
-                    weeklyBudgetCategories = data.weeklyBudgetCategoriesOrder;
-                }
-            } else {
-                transactions = [];
-                budgets = {};
-                weeklyBudgets = {};
-                dailyBudgets = {};
-            }
-            currentPage = 1; 
-            dashboardFilterDate = '';
-            renderAll();
-        }, error => console.error("Error listening to data:", error));
-    };
-
     const saveDataToFirestore = async () => {
         if (!currentUser) return;
         try {
@@ -405,30 +375,74 @@ document.addEventListener('DOMContentLoaded', () => {
         summarySection.appendChild(totalExpensesCard);
     };
 
+    // --- FUNGSI BARU UNTUK MENGHITUNG PENGELUARAN UNTUK KATEGORI DAN MINGGU TERTENTU ---
+    const getWeeklyTotalForCategory = (category, weekNumber, currentMonthAndYear) => {
+        return transactions.filter(t => {
+            const txDate = new Date(t.date);
+            const txWeekNumber = getWeekNumberInMonth(txDate);
+            const txMonthAndYear = `${txDate.getFullYear()}-${(txDate.getMonth() + 1).toString().padStart(2, '0')}`;
+            return t.category === category && txWeekNumber === weekNumber && txMonthAndYear === currentMonthAndYear;
+        }).reduce((sum, t) => sum + t.amount, 0);
+    };
+
     const renderWeeklyBudgetSummary = () => {
         weeklyBudgetSummarySection.innerHTML = '';
         const today = new Date();
-        const currentWeekNumber = getWeekNumberInMonth(today);
-        const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
-        const currentDateKey = getCurrentDateKey();
+        const currentMonthAndYear = getCurrentMonthAndYear();
         
-        weeklyBudgetCategories.forEach(category => {
+        // Kategori yang akan memiliki kartu perminggu
+        const categoriesWithWeeklyCards = ['Belanja Mingguan', 'Tayong jajan'];
+
+        categoriesWithWeeklyCards.forEach(category => {
+            for (let i = 1; i <= 4; i++) {
+                const total = getWeeklyTotalForCategory(category, i, currentMonthAndYear);
+                const weekKey = `${currentMonthAndYear}-W${i}`;
+                const budget = weeklyBudgets[category] ? weeklyBudgets[category][weekKey] : 0;
+                const remaining = budget - total;
+                const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+                
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.setAttribute('draggable', 'true');
+                card.dataset.category = category;
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-500">${category} - Minggu ${i}</h3>
+                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                    <div class="border-t border-dashed mt-2 pt-2">
+                        <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
+                        <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                        <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="weekly" title="Hapus Kartu">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+                `;
+                weeklyBudgetSummarySection.appendChild(card);
+            }
+        });
+
+        // Tampilkan kartu untuk kategori mingguan lainnya seperti 'Mingguan' dan 'Tayong harian'
+        const otherWeeklyCategories = ['Mingguan', 'Tayong harian'];
+        otherWeeklyCategories.forEach(category => {
             let total = 0;
             if (category === 'Tayong harian') {
-                total = transactions.filter(t => t.category === category && t.date === currentDateKey).reduce((sum, t) => sum + t.amount, 0);
+                total = transactions.filter(t => t.category === category && t.date === getCurrentDateKey()).reduce((sum, t) => sum + t.amount, 0);
             } else {
                 total = transactions.filter(t => {
                     const txDate = new Date(t.date);
                     const txWeekNumber = getWeekNumberInMonth(txDate);
+                    const currentWeekNumber = getWeekNumberInMonth(today);
                     const txWeekKey = `${txDate.getFullYear()}-${txDate.getMonth() + 1}-W${txWeekNumber}`;
+                    const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
                     return t.category === category && txWeekKey === currentWeekKey;
                 }).reduce((sum, t) => sum + t.amount, 0);
             }
             
             let budget = 0;
             if (category === 'Tayong harian') {
-                budget = dailyBudgets[currentDateKey] || 0;
+                budget = dailyBudgets[getCurrentDateKey()] || 0;
             } else {
+                const currentWeekNumber = getWeekNumberInMonth(today);
+                const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
                 budget = weeklyBudgets[category] ? weeklyBudgets[category][currentWeekKey] : 0;
             }
             
@@ -778,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
                            class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
                 `;
                 budgetInputsContainer.appendChild(inputGroup);
-            } else {
+            } else if (category === 'Belanja Mingguan' || category === 'Tayong jajan') {
                 for (let i = 1; i <= 4; i++) {
                     const today = new Date();
                     const currentYear = today.getFullYear();
@@ -794,6 +808,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     budgetInputsContainer.appendChild(inputGroup);
                 }
+            } else {
+                 const today = new Date();
+                 const currentWeekNumber = getWeekNumberInMonth(today);
+                 const currentYear = today.getFullYear();
+                 const currentMonth = today.getMonth() + 1;
+                 const weekKey = `${currentYear}-${currentMonth}-W${currentWeekNumber}`;
+                 const budgetValue = (weeklyBudgets[category] && weeklyBudgets[category][weekKey]) ? weeklyBudgets[category][weekKey] : 0;
+                 const inputGroup = document.createElement('div');
+                 inputGroup.className = 'mb-4';
+                 inputGroup.innerHTML = `
+                     <label for="budget-${category}-${weekKey}" class="block text-sm font-medium text-slate-600">${category} (Minggu Ini)</label>
+                     <input type="number" id="budget-${category}-${weekKey}" name="budget-${category}-${weekKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
+                         class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                 `;
+                 budgetInputsContainer.appendChild(inputGroup);
             }
         });
     };
@@ -827,18 +856,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     const amount = parseFloat(input.value) || 0;
                     newDailyBudgets[currentDateKey] = amount;
                  }
+            } else if (category === 'Belanja Mingguan' || category === 'Tayong jajan') {
+                 for (let i = 1; i <= 4; i++) {
+                     const weekKey = `${currentYear}-${currentMonth}-W${i}`;
+                     const input = document.getElementById(`budget-${category}-${weekKey}`);
+                     if (input) {
+                         const amount = parseFloat(input.value) || 0;
+                         if (!newWeeklyBudgets[category]) {
+                             newWeeklyBudgets[category] = {};
+                         }
+                         newWeeklyBudgets[category][weekKey] = amount;
+                     }
+                 }
             } else {
-                for (let i = 1; i <= 4; i++) {
-                    const weekKey = `${currentYear}-${currentMonth}-W${i}`;
-                    const input = document.getElementById(`budget-${category}-${weekKey}`);
-                    if (input) {
-                        const amount = parseFloat(input.value) || 0;
-                        if (!newWeeklyBudgets[category]) {
-                            newWeeklyBudgets[category] = {};
-                        }
-                        newWeeklyBudgets[category][weekKey] = amount;
-                    }
-                }
+                 const currentWeekNumber = getWeekNumberInMonth(today);
+                 const weekKey = `${currentYear}-${currentMonth}-W${currentWeekNumber}`;
+                 const input = document.getElementById(`budget-${category}-${weekKey}`);
+                 if (input) {
+                     const amount = parseFloat(input.value) || 0;
+                     if (!newWeeklyBudgets[category]) {
+                         newWeeklyBudgets[category] = {};
+                     }
+                     newWeeklyBudgets[category][weekKey] = amount;
+                 }
             }
         });
         
