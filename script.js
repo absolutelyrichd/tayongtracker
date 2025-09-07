@@ -108,6 +108,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const existingCategorySelect = document.getElementById('existingCategorySelect');
     const existingCategoryMonthlyCheckbox = document.getElementById('existingCategoryMonthly');
     const existingCategoryWeeklyCheckbox = document.getElementById('existingCategoryWeekly');
+    
+    // Elemen baru untuk Aksi Masal
+    const tabBulkAction = document.getElementById('tabBulkAction');
+    const bulkActionContent = document.getElementById('bulkActionContent');
+    const bulkOldCategorySelect = document.getElementById('bulkOldCategory');
+    const bulkNewCategorySelect = document.getElementById('bulkNewCategory');
+    const bulkApplyBtn = document.getElementById('bulkApplyBtn');
+    const bulkTransactionsList = document.getElementById('bulkTransactionsList');
+    const bulkEmptyState = document.getElementById('bulkEmptyState');
 
     // --- AUTHENTICATION ---
     loginBtn.addEventListener('click', () => {
@@ -204,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCategorySelects();
         renderCategoryList();
         renderAddExistingCategoryDropdown(); // NEW: Call the function to render the existing categories dropdown
+        renderBulkActionUI();
     }
 
     // --- TABS ---
@@ -228,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isStats = activeTab === 'stats';
         const isBackup = activeTab === 'backup';
         const isCategoryManagement = activeTab === 'categoryManagement';
+        const isBulkAction = activeTab === 'bulkAction';
 
         tabDashboard.classList.toggle('active', isDashboard);
         tabWeeklyBudget.classList.toggle('active', isWeeklyBudget);
@@ -236,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabStats.classList.toggle('active', isStats);
         tabBackup.classList.toggle('active', isBackup);
         tabCategoryManagement.classList.toggle('active', isCategoryManagement);
+        tabBulkAction.classList.toggle('active', isBulkAction);
 
         dashboardContent.classList.toggle('hidden', !isDashboard);
         weeklyBudgetContent.classList.toggle('hidden', !isWeeklyBudget);
@@ -244,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetContentEl.classList.toggle('hidden', !isBudget);
         backupContent.classList.toggle('hidden', !isBackup);
         categoryManagementContent.classList.toggle('hidden', !isCategoryManagement);
+        bulkActionContent.classList.toggle('hidden', !isBulkAction);
 
         // Reset filters and pagination when switching tabs
         if (isDashboard) {
@@ -261,6 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (isCategoryManagement) {
             renderCategoryList();
             renderAddExistingCategoryDropdown();
+        } else if (isBulkAction) {
+            renderBulkActionUI();
         }
     }
     tabDashboard.addEventListener('click', () => switchTab('dashboard'));
@@ -270,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabStats.addEventListener('click', () => switchTab('stats'));
     tabBackup.addEventListener('click', () => switchTab('backup'));
     tabCategoryManagement.addEventListener('click', () => switchTab('categoryManagement'));
+    tabBulkAction.addEventListener('click', () => switchTab('bulkAction'));
 
     // --- GENERIC CONFIRMATION MODAL ---
     const confirmationModal = document.getElementById('confirmationModal');
@@ -1095,6 +1111,105 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         saveDataToFirestore();
+    };
+
+    // --- LOGIKA UNTUK TAB AKSI MASAL ---
+    
+    // Fungsi untuk merender UI Aksi Masal dan dropdown-nya
+    const renderBulkActionUI = () => {
+        // Populate "Pilih Kategori Lama" dropdown
+        bulkOldCategorySelect.innerHTML = '<option value="" disabled selected>Pilih kategori lama</option>';
+        allCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            bulkOldCategorySelect.appendChild(option);
+        });
+
+        // Populate "Pilih Kategori Baru" dropdown
+        bulkNewCategorySelect.innerHTML = '<option value="" disabled selected>Pilih kategori baru</option>';
+        allCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            bulkNewCategorySelect.appendChild(option);
+        });
+
+        // Event listener untuk perubahan pada dropdown kategori lama
+        bulkOldCategorySelect.addEventListener('change', (e) => {
+            renderBulkTransactionsList(e.target.value);
+        });
+
+        // Event listener untuk tombol "Terapkan Perubahan"
+        bulkApplyBtn.addEventListener('click', () => {
+            const oldCategory = bulkOldCategorySelect.value;
+            const newCategory = bulkNewCategorySelect.value;
+            if (oldCategory && newCategory && oldCategory !== newCategory) {
+                openConfirmationModal({
+                    title: 'Konfirmasi Aksi Masal',
+                    message: `Anda akan mengubah semua transaksi dari kategori "${oldCategory}" menjadi "${newCategory}". Apakah Anda yakin?`,
+                    confirmText: 'Ya, Ubah Kategori',
+                    confirmClass: 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700',
+                    action: () => {
+                        applyBulkCategoryChange(oldCategory, newCategory);
+                    }
+                });
+            } else {
+                openConfirmationModal({
+                    title: 'Error',
+                    message: 'Pastikan Anda memilih kategori lama dan kategori baru yang berbeda.',
+                    confirmText: 'OK',
+                    confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                    action: () => {}
+                });
+            }
+        });
+
+        // Render daftar transaksi awal (kosong)
+        renderBulkTransactionsList('');
+    };
+
+    // Fungsi untuk merender daftar transaksi yang cocok dengan kategori yang dipilih
+    const renderBulkTransactionsList = (category) => {
+        bulkTransactionsList.innerHTML = '';
+        const transactionsToDisplay = transactions.filter(t => t.category === category);
+
+        if (transactionsToDisplay.length === 0) {
+            bulkEmptyState.classList.remove('hidden');
+        } else {
+            bulkEmptyState.classList.add('hidden');
+            transactionsToDisplay.forEach(t => {
+                const transactionItem = document.createElement('div');
+                transactionItem.className = 'flex justify-between items-center py-2 border-b border-slate-100 last:border-b-0';
+                transactionItem.innerHTML = `
+                    <div class="flex-grow">
+                        <p class="font-semibold text-slate-800">${t.detail}</p>
+                        <p class="text-xs text-slate-500">${formatDate(t.date)} - ${formatCurrency(t.amount)}</p>
+                    </div>
+                    <span class="px-2 py-1 text-xs font-medium rounded-full ${categoryColors[t.category] || 'bg-gray-100 text-gray-800'}">${t.category}</span>
+                `;
+                bulkTransactionsList.appendChild(transactionItem);
+            });
+        }
+    };
+    
+    // Fungsi untuk menerapkan perubahan kategori secara masal
+    const applyBulkCategoryChange = (oldCategory, newCategory) => {
+        transactions = transactions.map(t => {
+            if (t.category === oldCategory) {
+                return { ...t, category: newCategory };
+            }
+            return t;
+        });
+        saveDataToFirestore();
+        renderAll(); // Perbarui UI di semua tab
+        openConfirmationModal({
+            title: 'Sukses',
+            message: `Semua transaksi dari "${oldCategory}" telah berhasil diubah menjadi "${newCategory}".`,
+            confirmText: 'OK',
+            confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+            action: () => {}
+        });
     };
 
     // --- STATS LOGIC ---
