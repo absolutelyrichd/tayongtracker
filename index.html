@@ -205,8 +205,9 @@
                     <button id="tabDashboard" class="tab-btn active">Umum</button>
                     <button id="tabWeeklyBudget" class="tab-btn">Budget Mingguan</button>
                     <button id="tabMonthlyBudget" class="tab-btn">Budget Bulanan</button>
-                    <button id="tabStats" class="tab-btn">Statistik</button>
                     <button id="tabBudget" class="tab-btn">Input Budget</button>
+                    <button id="tabStats" class="tab-btn">Statistik</button>
+                    <button id="tabCategoryManagement" class="tab-btn">Ubah Kategori</button>
                     <button id="tabBackup" class="tab-btn">Manajemen Backup</button>
                 </nav>
             </div>
@@ -290,6 +291,44 @@
                         </form>
                     </div>
                 </div>
+
+                <!-- Category Management Content (NEW) -->
+                <div id="categoryManagementContent" class="hidden">
+                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-bold mb-4">Ubah Kategori</h2>
+                        <p class="text-slate-500 mb-6">Kelola kategori pengeluaran Anda.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Form Tambah/Edit Kategori -->
+                            <div>
+                                <h3 class="text-lg font-semibold mb-4">Tambah Kategori Baru</h3>
+                                <form id="categoryForm" class="space-y-4">
+                                    <div>
+                                        <label for="categoryNameInput" class="block text-sm font-medium text-slate-600">Nama Kategori</label>
+                                        <input type="text" id="categoryNameInput" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" placeholder="Contoh: Transportasi" required>
+                                    </div>
+                                    <div>
+                                        <label for="categoryTabSelect" class="block text-sm font-medium text-slate-600">Tampilkan di Tab</label>
+                                        <select id="categoryTabSelect" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                                            <option value="monthly">Budget Bulanan</option>
+                                            <option value="weekly">Budget Mingguan</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" id="addCategoryBtn" class="w-full bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">Tambah Kategori</button>
+                                </form>
+                            </div>
+
+                            <!-- Daftar Kategori -->
+                            <div>
+                                <h3 class="text-lg font-semibold mb-4">Daftar Kategori</h3>
+                                <ul id="categoryList" class="space-y-2">
+                                    <!-- List items will be dynamically added here -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
 
                 <!-- Backup Management Content -->
                 <div id="backupContent" class="hidden">

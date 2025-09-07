@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let weeklyBudgetCategories = ['Mingguan', ...dailyBudgetCategories]; // Make this `let`
     let monthlyBudgetCategories = ['Bulanan', 'Mingguan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel', 'Tayong harian']; // Make this `let`
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
+    
+    let userDefinedCategories = {}; // Objek untuk menyimpan kategori yang ditentukan pengguna
 
     // Pagination state
     let currentPage = 1;
@@ -94,6 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const budgetContent = document.getElementById('budgetContent');
     const budgetForm = document.getElementById('budgetForm');
     const budgetInputsContainer = document.getElementById('budgetInputsContainer');
+    const categoryManagementContent = document.getElementById('categoryManagementContent');
+    const categoryForm = document.getElementById('categoryForm');
+    const categoryNameInput = document.getElementById('categoryNameInput');
+    const categoryTabSelect = document.getElementById('categoryTabSelect');
+    const categoryList = document.getElementById('categoryList');
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+
 
     // --- AUTHENTICATION ---
     loginBtn.addEventListener('click', () => {
@@ -124,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             budgets = {};
             weeklyBudgets = {};
             dailyBudgets = {};
+            userDefinedCategories = {};
             renderAll();
             loginPrompt.classList.remove('hidden');
             mainContent.classList.add('hidden');
@@ -142,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 budgets = data.budgets || {};
                 weeklyBudgets = data.weeklyBudgets || {};
                 dailyBudgets = data.dailyBudgets || {};
-                
+                userDefinedCategories = data.userDefinedCategories || {};
+
                 // Load saved card order and ensure 'Mingguan' is present
                 if (data.monthlyBudgetCategoriesOrder) {
                     monthlyBudgetCategories = data.monthlyBudgetCategoriesOrder;
@@ -163,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 budgets = {};
                 weeklyBudgets = {};
                 dailyBudgets = {};
+                userDefinedCategories = {};
             }
             currentPage = 1; 
             dashboardFilterDate = '';
@@ -180,7 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 weeklyBudgets, 
                 dailyBudgets,
                 monthlyBudgetCategoriesOrder: monthlyBudgetCategories,
-                weeklyBudgetCategoriesOrder: weeklyBudgetCategories
+                weeklyBudgetCategoriesOrder: weeklyBudgetCategories,
+                userDefinedCategories
             }, { merge: true });
         } catch (error) {
             console.error("Error saving data:", error);
@@ -194,6 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMonthlyBudgetSummary();
         renderTransactions();
         renderAllStats();
+        renderCategoryManagementContent();
+        renderCategorySelectOptions();
     }
 
     // --- TABS ---
@@ -203,12 +218,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabBudget = document.getElementById('tabBudget');
     const tabStats = document.getElementById('tabStats');
     const tabBackup = document.getElementById('tabBackup');
+    const tabCategoryManagement = document.getElementById('tabCategoryManagement');
+
     const dashboardContent = document.getElementById('dashboardContent');
     const weeklyBudgetContent = document.getElementById('weeklyBudgetContent');
     const monthlyBudgetContent = document.getElementById('monthlyBudgetContent');
     const statsContent = document.getElementById('statsContent');
     const budgetContentEl = document.getElementById('budgetContent');
     const backupContent = document.getElementById('backupContent');
+    const categoryManagementContentEl = document.getElementById('categoryManagementContent');
     
     function switchTab(activeTab) {
         const isDashboard = activeTab === 'dashboard';
@@ -217,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isBudget = activeTab === 'budget';
         const isStats = activeTab === 'stats';
         const isBackup = activeTab === 'backup';
+        const isCategoryManagement = activeTab === 'categoryManagement';
 
         tabDashboard.classList.toggle('active', isDashboard);
         tabWeeklyBudget.classList.toggle('active', isWeeklyBudget);
@@ -224,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabBudget.classList.toggle('active', isBudget);
         tabStats.classList.toggle('active', isStats);
         tabBackup.classList.toggle('active', isBackup);
+        tabCategoryManagement.classList.toggle('active', isCategoryManagement);
 
         dashboardContent.classList.toggle('hidden', !isDashboard);
         weeklyBudgetContent.classList.toggle('hidden', !isWeeklyBudget);
@@ -231,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statsContent.classList.toggle('hidden', !isStats);
         budgetContentEl.classList.toggle('hidden', !isBudget);
         backupContent.classList.toggle('hidden', !isBackup);
+        categoryManagementContentEl.classList.toggle('hidden', !isCategoryManagement);
 
         // Reset filters and pagination when switching tabs
         if (isDashboard) {
@@ -245,6 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderWeeklyBudgetSummary();
         } else if (isMonthlyBudget) {
             renderMonthlyBudgetSummary();
+        } else if (isCategoryManagement) {
+            renderCategoryManagementContent();
         }
     }
     tabDashboard.addEventListener('click', () => switchTab('dashboard'));
@@ -253,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabBudget.addEventListener('click', () => switchTab('budget'));
     tabStats.addEventListener('click', () => switchTab('stats'));
     tabBackup.addEventListener('click', () => switchTab('backup'));
+    tabCategoryManagement.addEventListener('click', () => switchTab('categoryManagement'));
 
     // --- GENERIC CONFIRMATION MODAL ---
     const confirmationModal = document.getElementById('confirmationModal');
@@ -312,6 +336,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailInput = document.getElementById('detail');
     const amountInput = document.getElementById('amount');
     const paymentSelect = document.getElementById('payment');
+    
+    // Fungsi untuk memperbarui pilihan kategori di modal transaksi
+    const renderCategorySelectOptions = () => {
+        categorySelect.innerHTML = '';
+        const allCategories = [...dashboardCategories, ...Object.keys(userDefinedCategories)];
+        allCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categorySelect.appendChild(option);
+        });
+    }
 
     const renderSummary = () => {
         summarySection.innerHTML = '';
@@ -336,7 +372,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentYear = today.getFullYear();
         const currentDateKey = getCurrentDateKey();
         
-        weeklyBudgetCategories.forEach(category => {
+        // Gabungkan kategori bawaan dan kategori kustom untuk tab mingguan
+        const allWeeklyCategories = [...weeklyBudgetCategories, ...Object.keys(userDefinedCategories).filter(cat => userDefinedCategories[cat].tab === 'weekly')];
+
+        allWeeklyCategories.forEach(category => {
             let total = 0;
             if (category === 'Tayong harian') {
                 // Perhitungan pengeluaran mingguan untuk Tayong harian
@@ -390,7 +429,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentMonthAndYear = getCurrentMonthAndYear();
         const currentMonthTransactions = transactions.filter(t => t.date.startsWith(currentMonthAndYear));
 
-        const allMonthlyCategories = monthlyBudgetCategories;
+        // Gabungkan kategori bawaan dan kategori kustom untuk tab bulanan
+        const allMonthlyCategories = [...monthlyBudgetCategories, ...Object.keys(userDefinedCategories).filter(cat => userDefinedCategories[cat].tab === 'monthly')];
+
         allMonthlyCategories.forEach(category => {
             let total = 0;
             let budget = 0;
@@ -698,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetInputsContainer.appendChild(monthlyBudgetTitle);
 
         monthlyBudgetCategories.forEach(category => {
-            if (category !== 'Mingguan') {
+            if (category !== 'Mingguan' && !userDefinedCategories[category]) {
                 const budgetValue = budgets[category] || 0;
                 const inputGroup = document.createElement('div');
                 inputGroup.className = 'mb-4';
@@ -711,6 +752,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
+        // Tambahkan input budget untuk kategori kustom bulanan
+        Object.keys(userDefinedCategories).filter(cat => userDefinedCategories[cat].tab === 'monthly').forEach(category => {
+            const budgetValue = budgets[category] || 0;
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'mb-4';
+            inputGroup.innerHTML = `
+                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category}</label>
+                <input type="number" id="budget-${category}" name="budget-${category}" placeholder="Contoh: 1000000" min="0" value="${budgetValue}"
+                    class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+            `;
+            budgetInputsContainer.appendChild(inputGroup);
+        });
+
         const weeklyBudgetTitle = document.createElement('h3');
         weeklyBudgetTitle.className = 'text-lg font-bold mt-6 mb-2 text-slate-700';
         weeklyBudgetTitle.textContent = 'Budget Mingguan';
@@ -746,6 +800,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+        
+        // Tambahkan input budget untuk kategori kustom mingguan
+        Object.keys(userDefinedCategories).filter(cat => userDefinedCategories[cat].tab === 'weekly').forEach(category => {
+            for (let i = 1; i <= 4; i++) {
+                const today = new Date();
+                const currentYear = today.getFullYear();
+                const currentMonth = today.getMonth() + 1;
+                const weekKey = `${currentYear}-${currentMonth}-W${i}`;
+                const budgetValue = weeklyBudgets[category] ? weeklyBudgets[category][weekKey] : 0;
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'mb-4';
+                inputGroup.innerHTML = `
+                    <label for="budget-${category}-${weekKey}" class="block text-sm font-medium text-slate-600">${category} (Minggu ke-${i})</label>
+                    <input type="number" id="budget-${category}-${weekKey}" name="budget-${category}-${weekKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
+                        class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                `;
+                budgetInputsContainer.appendChild(inputGroup);
+            }
+        });
     };
     
     // Tangani pengiriman form budget
@@ -755,8 +828,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const newWeeklyBudgets = {};
         const newDailyBudgets = {};
 
-        // Ambil data budget bulanan
-        monthlyBudgetCategories.forEach(category => {
+        // Ambil data budget bulanan (termasuk kategori kustom bulanan)
+        const allMonthlyCats = [...monthlyBudgetCategories, ...Object.keys(userDefinedCategories).filter(cat => userDefinedCategories[cat].tab === 'monthly')];
+        allMonthlyCats.forEach(category => {
             if (category !== 'Mingguan') {
                 const input = document.getElementById(`budget-${category}`);
                 if (input) {
@@ -766,13 +840,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Ambil data budget mingguan & harian
+        // Ambil data budget mingguan & harian (termasuk kategori kustom mingguan)
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = today.getMonth() + 1;
         const currentDateKey = getCurrentDateKey();
         
-        weeklyBudgetCategories.forEach(category => {
+        const allWeeklyCats = [...weeklyBudgetCategories, ...Object.keys(userDefinedCategories).filter(cat => userDefinedCategories[cat].tab === 'weekly')];
+        allWeeklyCats.forEach(category => {
             if (category === 'Tayong harian') {
                  const input = document.getElementById(`budget-${category}-${currentDateKey}`);
                  if(input) {
@@ -806,11 +881,93 @@ document.addEventListener('DOMContentLoaded', () => {
             action: () => {}
         });
     });
+    
+    // --- CATEGORY MANAGEMENT LOGIC (NEW) ---
+    const renderCategoryManagementContent = () => {
+        categoryList.innerHTML = '';
+        const allCategories = [...dashboardCategories, ...Object.keys(userDefinedCategories)];
+        
+        allCategories.forEach(cat => {
+            const li = document.createElement('li');
+            li.className = 'flex items-center justify-between p-3 bg-slate-50 rounded-md';
+            const categoryInfo = userDefinedCategories[cat] ? ` (${userDefinedCategories[cat].tab})` : '';
+            li.innerHTML = `
+                <span class="font-semibold text-slate-700">${cat} ${categoryInfo}</span>
+                <div class="space-x-2">
+                    <button data-category="${cat}" class="edit-category-btn text-sky-500 hover:text-sky-700"><i class="fas fa-edit"></i></button>
+                    <button data-category="${cat}" class="delete-category-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            `;
+            categoryList.appendChild(li);
+        });
+    };
+    
+    categoryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newCategoryName = categoryNameInput.value;
+        const newCategoryTab = categoryTabSelect.value;
+        
+        if (newCategoryName in userDefinedCategories || dashboardCategories.includes(newCategoryName)) {
+            openConfirmationModal({
+                title: 'Kategori Sudah Ada',
+                message: 'Nama kategori ini sudah digunakan. Silakan gunakan nama lain.',
+                confirmText: 'OK',
+                confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                action: () => {}
+            });
+            return;
+        }
+
+        userDefinedCategories[newCategoryName] = { tab: newCategoryTab };
+        saveDataToFirestore();
+        categoryNameInput.value = '';
+        renderCategoryManagementContent();
+        renderCategorySelectOptions();
+        openConfirmationModal({
+            title: 'Kategori Ditambahkan',
+            message: `Kategori "${newCategoryName}" berhasil ditambahkan.`,
+            confirmText: 'OK',
+            confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+            action: () => {}
+        });
+    });
+
+    categoryList.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.delete-category-btn');
+        if (deleteBtn) {
+            const categoryToDelete = deleteBtn.dataset.category;
+            
+            if (dashboardCategories.includes(categoryToDelete)) {
+                openConfirmationModal({
+                    title: 'Tidak Bisa Dihapus',
+                    message: `Kategori bawaan tidak bisa dihapus.`,
+                    confirmText: 'OK',
+                    confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                    action: () => {}
+                });
+                return;
+            }
+            
+            openConfirmationModal({
+                title: 'Konfirmasi Hapus',
+                message: `Apakah Anda yakin ingin menghapus kategori "${categoryToDelete}"? Semua transaksi dengan kategori ini tidak akan terhapus, tetapi akan kehilangan kategorinya.`,
+                confirmText: 'Hapus',
+                confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700',
+                action: () => {
+                    delete userDefinedCategories[categoryToDelete];
+                    transactions = transactions.map(t => t.category === categoryToDelete ? { ...t, category: 'Tidak Berkategori' } : t);
+                    saveDataToFirestore();
+                    renderCategoryManagementContent();
+                    renderCategorySelectOptions();
+                }
+            });
+        }
+    });
 
     // --- STATS LOGIC ---
     const renderDashboardStats = () => {
         const ctx = document.getElementById('dashboardChart').getContext('2d');
-        const categoriesToShow = dashboardCategories;
+        const categoriesToShow = [...dashboardCategories, ...Object.keys(userDefinedCategories)];
         
         // Filter transaksi untuk bulan berjalan
         const currentMonthAndYear = getCurrentMonthAndYear();
@@ -884,7 +1041,8 @@ document.addEventListener('DOMContentLoaded', () => {
             weeklyBudgets, 
             dailyBudgets, 
             monthlyBudgetCategoriesOrder: monthlyBudgetCategories,
-            weeklyBudgetCategoriesOrder: weeklyBudgetCategories
+            weeklyBudgetCategoriesOrder: weeklyBudgetCategories,
+            userDefinedCategories
         };
         const dataStr = JSON.stringify(allData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -913,6 +1071,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         budgets = data.budgets || {};
                         weeklyBudgets = data.weeklyBudgets || {};
                         dailyBudgets = data.dailyBudgets || {};
+                        userDefinedCategories = data.userDefinedCategories || {};
                         if (data.monthlyBudgetCategoriesOrder) {
                             monthlyBudgetCategories = data.monthlyBudgetCategoriesOrder;
                         }
