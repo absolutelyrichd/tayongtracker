@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
     
     let userDefinedCategories = {}; // Objek untuk menyimpan kategori yang ditentukan pengguna
+    let categoryToEdit = null;
 
     // Pagination state
     let currentPage = 1;
@@ -885,17 +886,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CATEGORY MANAGEMENT LOGIC (NEW) ---
     const renderCategoryManagementContent = () => {
         categoryList.innerHTML = '';
-        const allCategories = [...dashboardCategories, ...Object.keys(userDefinedCategories)];
+        // Gabungkan kategori bawaan dan kategori kustom untuk tampilan
+        const allCategories = [...dashboardCategories.map(cat => ({ name: cat, isDefault: true, tab: (monthlyBudgetCategories.includes(cat) ? 'monthly' : 'weekly') })),
+                               ...Object.keys(userDefinedCategories).map(cat => ({ name: cat, isDefault: false, tab: userDefinedCategories[cat].tab }))];
         
         allCategories.forEach(cat => {
             const li = document.createElement('li');
             li.className = 'flex items-center justify-between p-3 bg-slate-50 rounded-md';
-            const categoryInfo = userDefinedCategories[cat] ? ` (${userDefinedCategories[cat].tab})` : '';
+            const categoryInfo = cat.isDefault ? '' : ` (${cat.tab})`;
             li.innerHTML = `
-                <span class="font-semibold text-slate-700">${cat} ${categoryInfo}</span>
+                <span class="font-semibold text-slate-700">${cat.name} ${categoryInfo}</span>
                 <div class="space-x-2">
-                    <button data-category="${cat}" class="edit-category-btn text-sky-500 hover:text-sky-700"><i class="fas fa-edit"></i></button>
-                    <button data-category="${cat}" class="delete-category-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
+                    <button data-category="${cat.name}" class="edit-category-btn text-sky-500 hover:text-sky-700"><i class="fas fa-edit"></i></button>
+                    <button data-category="${cat.name}" class="delete-category-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
                 </div>
             `;
             categoryList.appendChild(li);
@@ -907,25 +910,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const newCategoryName = categoryNameInput.value;
         const newCategoryTab = categoryTabSelect.value;
         
-        if (newCategoryName in userDefinedCategories || dashboardCategories.includes(newCategoryName)) {
-            openConfirmationModal({
-                title: 'Kategori Sudah Ada',
-                message: 'Nama kategori ini sudah digunakan. Silakan gunakan nama lain.',
-                confirmText: 'OK',
-                confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
-                action: () => {}
-            });
-            return;
+        // Cek apakah mode edit
+        if (categoryToEdit) {
+            // Logika untuk mengedit kategori
+            const oldName = categoryToEdit;
+            if (oldName in userDefinedCategories) {
+                userDefinedCategories[newCategoryName] = { tab: newCategoryTab };
+                delete userDefinedCategories[oldName];
+                // Perbarui semua transaksi yang menggunakan nama lama
+                transactions = transactions.map(t => t.category === oldName ? { ...t, category: newCategoryName } : t);
+            }
+            categoryToEdit = null;
+        } else {
+            // Logika untuk menambah kategori baru
+            if (newCategoryName in userDefinedCategories || dashboardCategories.includes(newCategoryName)) {
+                openConfirmationModal({
+                    title: 'Kategori Sudah Ada',
+                    message: 'Nama kategori ini sudah digunakan. Silakan gunakan nama lain.',
+                    confirmText: 'OK',
+                    confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                    action: () => {}
+                });
+                return;
+            }
+            userDefinedCategories[newCategoryName] = { tab: newCategoryTab };
         }
-
-        userDefinedCategories[newCategoryName] = { tab: newCategoryTab };
+        
         saveDataToFirestore();
         categoryNameInput.value = '';
-        renderCategoryManagementContent();
-        renderCategorySelectOptions();
+        categoryTabSelect.value = 'monthly';
+        addCategoryBtn.textContent = 'Tambah Kategori';
+        renderAll();
         openConfirmationModal({
-            title: 'Kategori Ditambahkan',
-            message: `Kategori "${newCategoryName}" berhasil ditambahkan.`,
+            title: 'Berhasil!',
+            message: 'Kategori berhasil disimpan.',
             confirmText: 'OK',
             confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
             action: () => {}
@@ -933,7 +951,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     categoryList.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.edit-category-btn');
         const deleteBtn = e.target.closest('.delete-category-btn');
+        
+        if (editBtn) {
+            const categoryName = editBtn.dataset.category;
+            categoryToEdit = categoryName;
+            
+            if (dashboardCategories.includes(categoryName)) {
+                 openConfirmationModal({
+                    title: 'Tidak Bisa Diedit',
+                    message: `Kategori bawaan tidak bisa diedit.`,
+                    confirmText: 'OK',
+                    confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                    action: () => {}
+                });
+                return;
+            }
+            
+            // Isi form dengan data kategori yang akan diedit
+            categoryNameInput.value = categoryName;
+            categoryTabSelect.value = userDefinedCategories[categoryName].tab;
+            addCategoryBtn.textContent = 'Simpan Perubahan';
+        }
+
         if (deleteBtn) {
             const categoryToDelete = deleteBtn.dataset.category;
             
