@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeConfirmationModal() {
         confirmationModal.classList.add('hidden');
         actionToConfirm = null;
-    }
+    };
     
     // Perbaiki event listener untuk modal konfirmasi
     confirmAction.onclick = () => {
@@ -926,8 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newCategoryMonthlyCheckbox.checked = false; // reset
         newCategoryWeeklyCheckbox.checked = false; // reset
         saveDataToFirestore();
-        renderMonthlyBudgetSummary(); // Perbarui tampilan budget bulanan
-        renderWeeklyBudgetSummary(); // Perbarui tampilan budget mingguan
+        renderAll();
     });
 
     // NEW: Fungsi untuk merender dropdown kategori yang sudah ada
