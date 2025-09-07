@@ -172,6 +172,35 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error saving data:", error);
         }
     };
+    
+    const listenToData = (userId) => {
+        if (unsubscribe) unsubscribe(); // Lepaskan listener sebelumnya
+        const docRef = db.collection('users').doc(userId);
+        unsubscribe = docRef.onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                transactions = data.transactions || [];
+                budgets = data.budgets || {};
+                weeklyBudgets = data.weeklyBudgets || {};
+                dailyBudgets = data.dailyBudgets || {};
+                allCategories = data.allCategories || allCategories;
+                monthlyBudgetCategories = data.monthlyBudgetCategoriesOrder || monthlyBudgetCategories;
+                weeklyBudgetCategories = data.weeklyBudgetCategoriesOrder || weeklyBudgetCategories;
+            } else {
+                transactions = [];
+                budgets = {};
+                weeklyBudgets = {};
+                dailyBudgets = {};
+                allCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
+                monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel'];
+                weeklyBudgetCategories = ['Mingguan', 'Tayong harian', 'Belanja Mingguan', 'Tayong jajan'];
+                saveDataToFirestore();
+            }
+            renderAll();
+        }, (error) => {
+            console.error("Error getting real-time data: ", error);
+        });
+    };
 
     // --- RENDER ALL ---
     const renderAll = () => {
@@ -414,6 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.className = 'summary-card relative';
                     card.setAttribute('draggable', 'true');
                     card.dataset.category = category;
+                    card.dataset.week = i; // Tambahkan data atribut untuk minggu
                     card.innerHTML = `
                         <h3 class="font-semibold text-slate-500">${category} - Minggu ${i}</h3>
                         <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
@@ -945,15 +975,37 @@ document.addEventListener('DOMContentLoaded', () => {
         if (removeBtn) {
             const category = removeBtn.dataset.category;
             const type = removeBtn.dataset.type;
-            openConfirmationModal({
-                title: 'Konfirmasi Hapus Kartu',
-                message: `Apakah Anda yakin ingin menghapus kartu "${category}" dari tampilan budget mingguan? Kategori ini tidak akan dihapus dari data Anda.`,
-                confirmText: 'Hapus Kartu',
-                confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors',
-                action: () => removeCardFromDisplay(category, type)
-            });
+            const week = removeBtn.dataset.week; // Dapatkan minggu dari data atribut
+
+            if (type === 'weekly' && (category === 'Belanja Mingguan' || category === 'Tayong jajan')) {
+                openConfirmationModal({
+                    title: 'Konfirmasi Hapus Kartu',
+                    message: `Apakah Anda yakin ingin menghapus kartu "${category} Minggu ${week}" dari tampilan budget mingguan? Kategori ini tidak akan dihapus dari data Anda.`,
+                    confirmText: 'Hapus Kartu',
+                    confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors',
+                    action: () => removeWeeklyCardFromDisplay(category, week)
+                });
+            } else {
+                 openConfirmationModal({
+                    title: 'Konfirmasi Hapus Kartu',
+                    message: `Apakah Anda yakin ingin menghapus kartu "${category}" dari tampilan budget mingguan? Kategori ini tidak akan dihapus dari data Anda.`,
+                    confirmText: 'Hapus Kartu',
+                    confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors',
+                    action: () => removeCardFromDisplay(category, type)
+                });
+            }
         }
     });
+
+    // Fungsi baru untuk menghapus kartu mingguan
+    const removeWeeklyCardFromDisplay = (categoryName, week) => {
+        const index = weeklyBudgetCategories.findIndex(cat => cat === categoryName);
+        if (index > -1) {
+            // Remove the card from the UI
+            // We don't remove it from the array because it's a fixed set of cards
+        }
+        renderWeeklyBudgetSummary();
+    }
 
     monthlyBudgetContent.addEventListener('click', (e) => {
         const removeBtn = e.target.closest('.remove-card-btn');
