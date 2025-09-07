@@ -269,19 +269,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelConfirm = document.getElementById('cancelConfirm');
     const confirmAction = document.getElementById('confirmAction');
     let actionToConfirm = null;
+    let confirmationInput = null;
 
     function openConfirmationModal(config) {
         confirmTitle.textContent = config.title;
         confirmMessage.textContent = config.message;
         confirmAction.className = config.confirmClass;
         confirmAction.textContent = config.confirmText;
-        actionToConfirm = config.action;
+        confirmAction.onclick = () => {
+            if (actionToConfirm && typeof actionToConfirm === 'function') {
+                actionToConfirm(confirmationInput ? confirmationInput.value.trim() : null);
+            }
+            closeConfirmationModal();
+        };
+
+        // Handle input field for editing
+        if (config.showInput) {
+            if (!confirmationInput) {
+                confirmationInput = document.createElement('input');
+                confirmationInput.type = 'text';
+                confirmationInput.className = 'w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500';
+                confirmationInput.placeholder = config.inputPlaceholder;
+            }
+            confirmationInput.value = config.inputValue || '';
+            confirmMessage.insertAdjacentElement('afterend', confirmationInput);
+        } else {
+            if (confirmationInput) {
+                confirmationInput.remove();
+                confirmationInput = null;
+            }
+        }
+        
         confirmationModal.classList.remove('hidden');
     }
     function closeConfirmationModal() {
         confirmationModal.classList.add('hidden');
         actionToConfirm = null;
     }
+    
+    // Perbarui event listener untuk modal konfirmasi
     confirmAction.addEventListener('click', () => {
         if (actionToConfirm && typeof actionToConfirm === 'function') {
             actionToConfirm();
@@ -303,7 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'Dana Cadangan': 'bg-indigo-100 text-indigo-800', // New color for combined card
         'Tayong harian': 'bg-green-100 text-green-800', // New color for Harian
         'Tayong weekend': 'bg-pink-100 text-pink-800', // New color for Weekend
-        'Tayong fleksibel': 'bg-sky-100 text-sky-800' // New color for Fleksibel
+        'Tayong fleksibel': 'bg-sky-100 text-sky-800', // New color for Fleksibel
+        'Tidak Terkategori': 'bg-gray-400 text-gray-900' // New color for 'Tidak Terkategori'
     };
     let transactionToEditIndex = null;
     const summarySection = document.getElementById('summarySection');
@@ -375,6 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="border-t border-dashed mt-2 pt-2">
                     <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
                     <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                    <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="weekly" title="Hapus Kartu">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
                 </div>
             `;
             weeklyBudgetSummarySection.appendChild(card);
@@ -406,6 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="border-t border-dashed mt-2 pt-2">
                         <p class="text-xs font-semibold text-slate-500">Saldo Saved: ${formatCurrency(savedTotal)}</p>
                         <p class="text-xs font-semibold text-slate-500">Saldo Darurat: ${formatCurrency(daruratTotal)}</p>
+                        <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="monthly" title="Hapus Kartu">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
                     </div>
                 `;
             } else if (category === 'Saved' || category === 'Darurat') {
@@ -414,6 +447,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.innerHTML = `
                     <h3 class="font-semibold text-slate-500">${category}</h3>
                     <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                    <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="monthly" title="Hapus Kartu">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
                 `;
             } else {
                 total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
@@ -428,6 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="border-t border-dashed mt-2 pt-2">
                         <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
                         <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                        <button class="remove-card-btn text-red-500 hover:text-red-700 absolute top-2 right-2" data-category="${category}" data-type="monthly" title="Hapus Kartu">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
                     </div>
                 `;
             }
@@ -798,6 +837,47 @@ document.addEventListener('DOMContentLoaded', () => {
             categoryListContainer.appendChild(categoryCard);
         });
     };
+    
+    // Fungsi untuk menghapus kartu dari tampilan budget (tidak menghapus kategori)
+    const removeCardFromDisplay = (categoryName, type) => {
+        if (type === 'monthly') {
+            monthlyBudgetCategories = monthlyBudgetCategories.filter(cat => cat !== categoryName);
+        } else if (type === 'weekly') {
+            weeklyBudgetCategories = weeklyBudgetCategories.filter(cat => cat !== categoryName);
+        }
+        saveDataToFirestore();
+    };
+
+    // Event listener untuk tombol hapus kartu
+    weeklyBudgetContent.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.remove-card-btn');
+        if (removeBtn) {
+            const category = removeBtn.dataset.category;
+            const type = removeBtn.dataset.type;
+            openConfirmationModal({
+                title: 'Konfirmasi Hapus Kartu',
+                message: `Apakah Anda yakin ingin menghapus kartu "${category}" dari tampilan budget mingguan? Kategori ini tidak akan dihapus dari data Anda.`,
+                confirmText: 'Hapus Kartu',
+                confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors',
+                action: () => removeCardFromDisplay(category, type)
+            });
+        }
+    });
+
+    monthlyBudgetContent.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.remove-card-btn');
+        if (removeBtn) {
+            const category = removeBtn.dataset.category;
+            const type = removeBtn.dataset.type;
+            openConfirmationModal({
+                title: 'Konfirmasi Hapus Kartu',
+                message: `Apakah Anda yakin ingin menghapus kartu "${category}" dari tampilan budget bulanan? Kategori ini tidak akan dihapus dari data Anda.`,
+                confirmText: 'Hapus Kartu',
+                confirmClass: 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors',
+                action: () => removeCardFromDisplay(category, type)
+            });
+        }
+    });
 
     // Fungsi untuk menambah kategori baru
     addCategoryForm.addEventListener('submit', (e) => {
@@ -831,10 +911,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const deleteButton = e.target.closest('.delete-category-btn');
         if (editButton) {
             const oldCategoryName = editButton.dataset.category;
-            const newCategoryName = prompt('Masukkan nama baru untuk kategori:', oldCategoryName);
-            if (newCategoryName && newCategoryName.trim() !== '' && newCategoryName.trim() !== oldCategoryName) {
-                updateCategoryName(oldCategoryName, newCategoryName.trim());
-            }
+            openConfirmationModal({
+                title: 'Edit Kategori',
+                message: 'Masukkan nama baru untuk kategori:',
+                showInput: true,
+                inputValue: oldCategoryName,
+                inputPlaceholder: 'Nama kategori baru',
+                confirmText: 'Simpan',
+                confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700',
+                action: (newName) => {
+                    if (newName && newName !== '' && newName !== oldCategoryName) {
+                        updateCategoryName(oldCategoryName, newName);
+                    }
+                }
+            });
         }
         if (deleteButton) {
             const categoryToDelete = deleteButton.dataset.category;
