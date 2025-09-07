@@ -675,6 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setDefaultDate(dateInput);
         modalTitle.textContent = 'Tambah Transaksi Baru';
         submitTransactionBtn.innerHTML = `<i class="fas fa-save mr-2"></i>Simpan Transaksi`;
+        renderCategorySelectOptions(); // Tambahkan baris ini
         addTransactionModal.classList.remove('hidden');
     };
     const openEditModal = (id) => {
@@ -685,6 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         amountInput.value = tx.amount; paymentSelect.value = tx.payment;
         modalTitle.textContent = 'Edit Transaksi';
         submitTransactionBtn.innerHTML = `<i class="fas fa-save mr-2"></i>Update Transaksi`;
+        renderCategorySelectOptions(); // Tambahkan baris ini
         addTransactionModal.classList.remove('hidden');
     };
     const closeTransactionModal = () => addTransactionModal.classList.add('hidden');
