@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const txWeekNumber = getWeekNumberInMonth(txDate);
                     const txMonth = txDate.getMonth() + 1;
                     const txYear = txDate.getFullYear();
-                    return t.category === category && txYear === currentYear && txMonth === currentMonth && txWeekNumber <= currentWeekNumber;
+                    return t.category === category && txYear === currentYear && txMonth === currentMonth && txWeekNumber === currentWeekNumber;
                 }).reduce((sum, t) => sum + t.amount, 0);
             }
             
@@ -739,10 +739,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Ambil data budget bulanan
         monthlyBudgetCategories.forEach(category => {
-            const input = document.getElementById(`budget-${category}`);
-            if (input) {
-                const amount = parseFloat(input.value) || 0;
-                newBudgets[category] = amount;
+            if (category !== 'Mingguan') {
+                const input = document.getElementById(`budget-${category}`);
+                if (input) {
+                    const amount = parseFloat(input.value) || 0;
+                    newBudgets[category] = amount;
+                }
             }
         });
 
