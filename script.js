@@ -409,6 +409,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 let weeklyTotal = 0;
                 let weeklyBudgetTotal = 0;
                 
+                // Tambahkan komentar untuk memperjelas cara kerja
+                // Kartu ini mengakumulasi budget dari input Mingguan (Minggu ke-1) hingga (Minggu ke-4)
                 for (let i = 1; i <= 4; i++) {
                     const weekKey = `${currentMonthKey}-W${i}`;
                     const weeklyTransactions = transactions.filter(t => {
