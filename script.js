@@ -142,9 +142,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 budgets = data.budgets || {};
                 weeklyBudgets = data.weeklyBudgets || {};
                 dailyBudgets = data.dailyBudgets || {};
-                // Load saved card order
+                
+                // Load saved card order and ensure 'Mingguan' is present
                 if (data.monthlyBudgetCategoriesOrder) {
                     monthlyBudgetCategories = data.monthlyBudgetCategoriesOrder;
+                    if (!monthlyBudgetCategories.includes('Mingguan')) {
+                        const bulananIndex = monthlyBudgetCategories.indexOf('Bulanan');
+                        if (bulananIndex !== -1) {
+                            monthlyBudgetCategories.splice(bulananIndex + 1, 0, 'Mingguan');
+                        } else {
+                            monthlyBudgetCategories.unshift('Mingguan');
+                        }
+                    }
                 }
                 if (data.weeklyBudgetCategoriesOrder) {
                     weeklyBudgetCategories = data.weeklyBudgetCategoriesOrder;
