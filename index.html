@@ -273,11 +273,17 @@
                                     <input type="text" id="newCategoryName" name="newCategoryName" placeholder="Contoh: Belanja" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
                                 </div>
                                 <div class="w-full sm:flex-1">
-                                    <label for="newCategoryType" class="block text-sm font-medium text-slate-600">Jenis Budget</label>
-                                    <select id="newCategoryType" name="newCategoryType" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-                                        <option value="monthly">Bulanan</option>
-                                        <option value="weekly">Mingguan</option>
-                                    </select>
+                                    <p class="block text-sm font-medium text-slate-600">Tampilkan di Tab:</p>
+                                    <div class="mt-2 flex items-center space-x-4">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="newCategoryMonthly" name="newCategoryMonthly" class="h-4 w-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500">
+                                            <label for="newCategoryMonthly" class="ml-2 text-sm text-slate-700">Budget Bulanan</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="newCategoryWeekly" name="newCategoryWeekly" class="h-4 w-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500">
+                                            <label for="newCategoryWeekly" class="ml-2 text-sm text-slate-700">Budget Mingguan</label>
+                                        </div>
+                                    </div>
                                 </div>
                                 <button type="submit" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm">
                                     <i class="fas fa-plus-circle mr-2"></i>Tambah
@@ -340,7 +346,7 @@
                             </button>
                             <label for="uploadAllInput" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer text-sm">
                                 <i class="fas fa-upload mr-2"></i>Muat dari Cadangan Lokal
-                            </label>
+                            </button>
                             <input type="file" id="uploadAllInput" class="hidden-input" accept="application/json">
                         </div>
                         </div>

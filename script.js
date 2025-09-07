@@ -99,7 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryManagementContent = document.getElementById('categoryManagementContent');
     const addCategoryForm = document.getElementById('addCategoryForm');
     const newCategoryNameInput = document.getElementById('newCategoryName');
-    const newCategoryTypeSelect = document.getElementById('newCategoryType');
+    // DOM Elements for new checkboxes
+    const newCategoryMonthlyCheckbox = document.getElementById('newCategoryMonthly');
+    const newCategoryWeeklyCheckbox = document.getElementById('newCategoryWeekly');
     const categoryListContainer = document.getElementById('categoryListContainer');
 
     // --- AUTHENTICATION ---
@@ -884,8 +886,22 @@ document.addEventListener('DOMContentLoaded', () => {
     addCategoryForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const newCategoryName = newCategoryNameInput.value.trim();
-        const newCategoryType = newCategoryTypeSelect.value;
+        const showInMonthly = newCategoryMonthlyCheckbox.checked;
+        const showInWeekly = newCategoryWeeklyCheckbox.checked;
+
         if (!newCategoryName) return;
+        
+        // Pastikan setidaknya satu kotak centang dipilih
+        if (!showInMonthly && !showInWeekly) {
+            openConfirmationModal({
+                title: 'Error', 
+                message: 'Pilih setidaknya satu tab untuk menampilkan kartu budget.',
+                confirmText: 'OK', 
+                confirmClass: 'px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700', 
+                action: () => {}
+            });
+            return;
+        }
 
         if (allCategories.includes(newCategoryName)) {
             openConfirmationModal({
@@ -896,16 +912,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         allCategories.push(newCategoryName);
-        if (newCategoryType === 'monthly') {
+        if (showInMonthly) {
             monthlyBudgetCategories.push(newCategoryName);
-        } else if (newCategoryType === 'weekly') {
+        }
+        if (showInWeekly) {
             weeklyBudgetCategories.push(newCategoryName);
         }
         
         newCategoryNameInput.value = '';
+        newCategoryMonthlyCheckbox.checked = false; // reset
+        newCategoryWeeklyCheckbox.checked = false; // reset
         saveDataToFirestore();
-        renderMonthlyBudgetSummary(); // Tambahan: Perbarui tampilan budget bulanan
-        renderWeeklyBudgetSummary(); // Tambahan: Perbarui tampilan budget mingguan
+        renderMonthlyBudgetSummary(); // Perbarui tampilan budget bulanan
+        renderWeeklyBudgetSummary(); // Perbarui tampilan budget mingguan
     });
 
     // Event listener untuk tombol edit dan hapus kategori
