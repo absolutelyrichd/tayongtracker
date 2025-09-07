@@ -746,15 +746,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 budgetInputsContainer.appendChild(inputGroup);
             } else {
                 for (let i = 1; i <= 4; i++) {
+                    const today = new Date();
+                    const currentYear = today.getFullYear();
+                    const currentMonth = today.getMonth() + 1;
                     const weekKey = `${currentYear}-${currentMonth}-W${i}`;
-                    const input = document.getElementById(`budget-${category}-${weekKey}`);
-                    if (input) {
-                        const amount = parseFloat(input.value) || 0;
-                        if (!newWeeklyBudgets[category]) {
-                            newWeeklyBudgets[category] = {};
-                        }
-                        newWeeklyBudgets[category][weekKey] = amount;
-                    }
+                    const budgetValue = (weeklyBudgets[category] && weeklyBudgets[category][weekKey]) ? weeklyBudgets[category][weekKey] : 0;
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'mb-4';
+                    inputGroup.innerHTML = `
+                        <label for="budget-${category}-${weekKey}" class="block text-sm font-medium text-slate-600">${category} (Minggu ke-${i})</label>
+                        <input type="number" id="budget-${category}-${weekKey}" name="budget-${category}-${weekKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
+                            class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                    `;
+                    budgetInputsContainer.appendChild(inputGroup);
                 }
             }
         });
