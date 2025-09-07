@@ -423,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return 0;
     };
     
+    // --- PERBAIKAN LOGIKA RENDER DI SINI ---
     const renderWeeklyBudgetSummary = () => {
         weeklyBudgetSummarySection.innerHTML = '';
         const today = new Date();
@@ -433,6 +434,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Gabungkan kategori mingguan lainnya
         const otherWeeklyCategories = ['Mingguan', 'Tayong harian'];
+        
+        // Pastikan semua kategori yang seharusnya ditampilkan per minggu ada
         const allWeeklyCards = [...categoriesWithWeeklyCards, ...otherWeeklyCategories];
         
         // Urutkan kartu berdasarkan urutan yang tersimpan di weeklyBudgetCategories
@@ -443,11 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Render 4 kartu per minggu untuk Belanja Mingguan dan Tayong jajan
                 for (let i = 1; i <= 4; i++) {
                     const total = getWeeklyTotalForCategory(category, i, currentMonthAndYear);
-                    
-                    // --- PERBAIKAN DI SINI ---
                     const budget = getWeeklyBudgetForCategory(category, i, currentMonthAndYear);
-                    // --- AKHIR PERBAIKAN ---
-
                     const remaining = budget - total;
                     const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
                     
@@ -479,8 +478,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const txDate = new Date(t.date);
                         const txWeekNumber = getWeekNumberInMonth(txDate);
                         const currentWeekNumber = getWeekNumberInMonth(today);
-                        const txWeekKey = `${txDate.getFullYear()}-${txDate.getMonth() + 1}-W${txWeekNumber}`;
-                        const currentWeekKey = `${today.getFullYear()}-${today.getMonth() + 1}-W${currentWeekNumber}`;
+                        const txWeekKey = `${txDate.getFullYear()}-${(txDate.getMonth() + 1).toString().padStart(2, '0')}-W${txWeekNumber}`;
+                        const currentWeekKey = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-W${currentWeekNumber}`;
                         return t.category === category && txWeekKey === currentWeekKey;
                     }).reduce((sum, t) => sum + t.amount, 0);
                 }
@@ -490,8 +489,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     budget = dailyBudgets[getCurrentDateKey()] || 0;
                 } else {
                     const currentWeekNumber = getWeekNumberInMonth(today);
-                    const currentMonthAndYear = getCurrentMonthAndYear(); // Tambahkan ini
-                    const weekKey = `${currentMonthAndYear}-W${currentWeekNumber}`; // Perbarui weekKey
+                    const currentMonthAndYearForOther = getCurrentMonthAndYear();
+                    const weekKey = `${currentMonthAndYearForOther}-W${currentWeekNumber}`;
                     budget = weeklyBudgets[category] && weeklyBudgets[category][weekKey] ? weeklyBudgets[category][weekKey] : 0;
                 }
                 
@@ -517,6 +516,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         addDragAndDropEventListeners(weeklyBudgetSummarySection, 'weekly');
     };
+    
+    // --- AKHIR PERBAIKAN LOGIKA RENDER ---
 
     const renderMonthlyBudgetSummary = () => {
         monthlyBudgetSummarySection.innerHTML = '';
