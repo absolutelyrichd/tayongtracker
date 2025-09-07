@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardCategories = ['Bulanan', 'Mingguan', 'Saved', 'Mumih', 'Darurat', 'Jajan di luar', 'Tayong harian', 'Tayong weekend', 'Tayong fleksibel'];
     const dailyBudgetCategories = ['Tayong harian'];
     let weeklyBudgetCategories = ['Mingguan', ...dailyBudgetCategories]; // Make this `let`
-    let monthlyBudgetCategories = ['Bulanan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel', 'Tayong harian']; // Make this `let`
+    let monthlyBudgetCategories = ['Bulanan', 'Mingguan', 'Mumih', 'Darurat', 'Jajan di luar', 'Saved', 'Tayong weekend', 'Tayong fleksibel', 'Tayong harian']; // Make this `let`
     const allBudgetCategories = [...new Set([...monthlyBudgetCategories, ...weeklyBudgetCategories])];
 
     // Pagination state
@@ -375,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const allMonthlyCategories = monthlyBudgetCategories;
         allMonthlyCategories.forEach(category => {
             let total = 0;
+            let budget = 0;
             const card = document.createElement('div');
             card.className = 'summary-card';
             card.setAttribute('draggable', 'true');
@@ -400,10 +401,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3 class="font-semibold text-slate-500">${category}</h3>
                     <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
                 `;
+            } else if (category === 'Mingguan') {
+                // Kalkulasi total pengeluaran dari Mingguan (1-4)
+                total = currentMonthTransactions.filter(t => {
+                    const txDate = new Date(t.date);
+                    const txMonth = txDate.getMonth() + 1;
+                    const txYear = txDate.getFullYear();
+                    return t.category === 'Mingguan' && txYear === new Date().getFullYear() && txMonth === new Date().getMonth() + 1;
+                }).reduce((sum, t) => sum + t.amount, 0);
+            
+                // Kalkulasi total budget dari Mingguan (1-4)
+                let totalBudget = 0;
+                const today = new Date();
+                const currentYear = today.getFullYear();
+                const currentMonth = today.getMonth() + 1;
+                for (let i = 1; i <= 4; i++) {
+                    const weekKey = `${currentYear}-${currentMonth}-W${i}`;
+                    if (weeklyBudgets['Mingguan'] && weeklyBudgets['Mingguan'][weekKey]) {
+                        totalBudget += weeklyBudgets['Mingguan'][weekKey];
+                    }
+                }
+                budget = totalBudget;
+                const remaining = budget - total;
+                const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
+
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-500">${category}</h3>
+                    <p class="amount-text text-slate-800">${formatCurrency(total)}</p>
+                    <div class="border-t border-dashed mt-2 pt-2">
+                        <p class="text-xs font-semibold text-slate-500">Budget: ${formatCurrency(budget)}</p>
+                        <p class="text-xs font-bold ${remainingColor}">Sisa: ${formatCurrency(remaining)}</p>
+                    </div>
+                `;
             } else {
                 total = currentMonthTransactions.filter(t => t.category === category).reduce((sum, t) => sum + t.amount, 0);
 
-                const budget = budgets[category] || 0;
+                budget = budgets[category] || 0;
                 const remaining = budget - total;
                 const remainingColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
 
@@ -647,15 +680,17 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetInputsContainer.appendChild(monthlyBudgetTitle);
 
         monthlyBudgetCategories.forEach(category => {
-            const budgetValue = budgets[category] || 0;
-            const inputGroup = document.createElement('div');
-            inputGroup.className = 'mb-4';
-            inputGroup.innerHTML = `
-                <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category}</label>
-                <input type="number" id="budget-${category}" name="budget-${category}" placeholder="Contoh: 1000000" min="0" value="${budgetValue}"
-                       class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-            `;
-            budgetInputsContainer.appendChild(inputGroup);
+            if (category !== 'Mingguan') {
+                const budgetValue = budgets[category] || 0;
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'mb-4';
+                inputGroup.innerHTML = `
+                    <label for="budget-${category}" class="block text-sm font-medium text-slate-600">${category}</label>
+                    <input type="number" id="budget-${category}" name="budget-${category}" placeholder="Contoh: 1000000" min="0" value="${budgetValue}"
+                        class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                `;
+                budgetInputsContainer.appendChild(inputGroup);
+            }
         });
         
         const weeklyBudgetTitle = document.createElement('h3');
@@ -665,16 +700,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         weeklyBudgetCategories.forEach(category => {
             if (category === 'Tayong harian') {
-                const currentDateKey = getCurrentDateKey();
-                const budgetValue = dailyBudgets[currentDateKey] || 0;
-                const inputGroup = document.createElement('div');
-                inputGroup.className = 'mb-4';
-                inputGroup.innerHTML = `
-                    <label for="budget-${category}-${currentDateKey}" class="block text-sm font-medium text-slate-600">${category} (per Hari)</label>
-                    <input type="number" id="budget-${category}-${currentDateKey}" name="budget-${category}-${currentDateKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
-                           class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-                `;
-                budgetInputsContainer.appendChild(inputGroup);
+                 const currentDateKey = getCurrentDateKey();
+                 const budgetValue = dailyBudgets[currentDateKey] || 0;
+                 const inputGroup = document.createElement('div');
+                 inputGroup.className = 'mb-4';
+                 inputGroup.innerHTML = `
+                     <label for="budget-${category}-${currentDateKey}" class="block text-sm font-medium text-slate-600">${category} (per Hari)</label>
+                     <input type="number" id="budget-${category}-${currentDateKey}" name="budget-${category}-${currentDateKey}" placeholder="Contoh: 50000" min="0" value="${budgetValue}"
+                            class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                 `;
+                 budgetInputsContainer.appendChild(inputGroup);
             } else {
                 for (let i = 1; i <= 4; i++) {
                     const today = new Date();
